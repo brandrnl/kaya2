@@ -1,0 +1,288 @@
+<?php
+// Prevent direct access
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class GVS_Locatie_Page {
+    
+    /**
+     * Render page
+     */
+    public function render_page() {
+        // Handle form submissions
+        $this->handle_actions();
+        
+        // Get action
+        $action = isset($_GET['action']) ? $_GET['action'] : 'list';
+        
+        switch ($action) {
+            case 'edit':
+            case 'new':
+                $this->render_form();
+                break;
+            default:
+                $this->render_list();
+        }
+    }
+    
+    /**
+     * Handle actions
+     */
+    private function handle_actions() {
+        if (!isset($_POST['gvs_action'])) {
+            return;
+        }
+        
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['_wpnonce'], 'gvs_locatie_action')) {
+            wp_die(__('Security check failed', 'gordijnen-voorraad'));
+        }
+        
+        $action = $_POST['gvs_action'];
+        
+        switch ($action) {
+            case 'save':
+                $this->save_locatie();
+                break;
+            case 'delete':
+                $this->delete_locatie();
+                break;
+        }
+    }
+    
+    /**
+     * Save locatie
+     */
+    private function save_locatie() {
+        $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        $naam = sanitize_text_field($_POST['naam']);
+        
+        // Check if name already exists
+        if (GVS_Locatie::naam_exists($naam, $id)) {
+            wp_die(__('Een locatie met deze naam bestaat al', 'gordijnen-voorraad'));
+        }
+        
+        if ($id) {
+            $locatie = GVS_Locatie::get_by_id($id);
+        } else {
+            $locatie = new GVS_Locatie();
+        }
+        
+        $locatie->set_naam($naam);
+        $locatie->set_beschrijving($_POST['beschrijving']);
+        $locatie->set_actief(isset($_POST['actief']) ? 1 : 0);
+        
+        if ($locatie->save()) {
+            wp_redirect(add_query_arg([
+                'page' => 'gvs-locaties',
+                'message' => 'saved'
+            ], admin_url('admin.php')));
+            exit;
+        }
+    }
+    
+    /**
+     * Delete locatie
+     */
+    private function delete_locatie() {
+        $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+        
+        if ($id) {
+            $locatie = GVS_Locatie::get_by_id($id);
+            if ($locatie) {
+                $result = $locatie->delete();
+                
+                if (is_wp_error($result)) {
+                    wp_die($result->get_error_message());
+                } elseif ($result) {
+                    wp_redirect(add_query_arg([
+                        'page' => 'gvs-locaties',
+                        'message' => 'deleted'
+                    ], admin_url('admin.php')));
+                    exit;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Render list
+     */
+    private function render_list() {
+        $locaties = GVS_Locatie::get_all();
+        ?>
+        <div class="wrap">
+            <h1>
+                <?php _e('Locaties', 'gordijnen-voorraad'); ?>
+                <a href="<?php echo add_query_arg('action', 'new'); ?>" class="page-title-action">
+                    <?php _e('Nieuwe Locatie', 'gordijnen-voorraad'); ?>
+                </a>
+            </h1>
+            
+            <?php $this->show_message(); ?>
+            
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th width="100"><?php _e('Naam', 'gordijnen-voorraad'); ?></th>
+                        <th><?php _e('Beschrijving', 'gordijnen-voorraad'); ?></th>
+                        <th width="100"><?php _e('Rollen', 'gordijnen-voorraad'); ?></th>
+                        <th width="120"><?php _e('Totaal Meters', 'gordijnen-voorraad'); ?></th>
+                        <th width="80"><?php _e('Status', 'gordijnen-voorraad'); ?></th>
+                        <th width="150"><?php _e('Acties', 'gordijnen-voorraad'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($locaties)): ?>
+                        <tr>
+                            <td colspan="6"><?php _e('Geen locaties gevonden', 'gordijnen-voorraad'); ?></td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($locaties as $locatie): ?>
+                            <tr>
+                                <td>
+                                    <strong><?php echo esc_html($locatie->naam); ?></strong>
+                                </td>
+                                <td><?php echo esc_html($locatie->beschrijving); ?></td>
+                                <td><?php echo intval($locatie->aantal_rollen); ?></td>
+                                <td><?php echo number_format($locatie->totaal_meters, 2, ',', '.'); ?> m</td>
+                                <td>
+                                    <?php if ($locatie->actief): ?>
+                                        <span class="gvs-badge in"><?php _e('Actief', 'gordijnen-voorraad'); ?></span>
+                                    <?php else: ?>
+                                        <span class="gvs-badge out"><?php _e('Inactief', 'gordijnen-voorraad'); ?></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <a href="<?php echo add_query_arg(['action' => 'edit', 'id' => $locatie->id]); ?>" class="button button-small">
+                                        <?php _e('Bewerk', 'gordijnen-voorraad'); ?>
+                                    </a>
+                                    <?php if ($locatie->aantal_rollen == 0): ?>
+                                        <a href="<?php echo wp_nonce_url(add_query_arg(['action' => 'delete', 'id' => $locatie->id]), 'gvs_locatie_action'); ?>" 
+                                           class="button button-small gvs-delete-btn"
+                                           onclick="return confirm('<?php esc_attr_e('Weet u zeker dat u deze locatie wilt verwijderen?', 'gordijnen-voorraad'); ?>')">
+                                            <?php _e('Verwijder', 'gordijnen-voorraad'); ?>
+                                        </a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+            
+            <div class="tablenav bottom">
+                <div class="alignleft actions">
+                    <p class="description">
+                        <?php _e('Locaties met rollen kunnen niet worden verwijderd. Verplaats eerst alle rollen naar een andere locatie.', 'gordijnen-voorraad'); ?>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Render form
+     */
+    private function render_form() {
+        $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+        $locatie = $id ? GVS_Locatie::get_by_id($id) : new GVS_Locatie();
+        
+        ?>
+        <div class="wrap">
+            <h1><?php echo $id ? __('Bewerk Locatie', 'gordijnen-voorraad') : __('Nieuwe Locatie', 'gordijnen-voorraad'); ?></h1>
+            
+            <form method="post" action="">
+                <?php wp_nonce_field('gvs_locatie_action'); ?>
+                <input type="hidden" name="gvs_action" value="save">
+                <input type="hidden" name="id" value="<?php echo $id; ?>">
+                
+                <table class="form-table">
+                    <tr>
+                        <th><label for="naam"><?php _e('Naam', 'gordijnen-voorraad'); ?></label></th>
+                        <td>
+                            <input type="text" id="naam" name="naam" value="<?php echo esc_attr($locatie->get_naam()); ?>" 
+                                   class="regular-text" required pattern="[A-Z0-9]+" title="<?php esc_attr_e('Gebruik alleen hoofdletters en cijfers (bijv. A01, B12)', 'gordijnen-voorraad'); ?>">
+                            <p class="description"><?php _e('Gebruik alleen hoofdletters en cijfers (bijv. A01, B12)', 'gordijnen-voorraad'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label for="beschrijving"><?php _e('Beschrijving', 'gordijnen-voorraad'); ?></label></th>
+                        <td>
+                            <input type="text" id="beschrijving" name="beschrijving" 
+                                   value="<?php echo esc_attr($locatie->get_beschrijving()); ?>" class="regular-text">
+                            <p class="description"><?php _e('Bijv. "Stelling A, Vak 01"', 'gordijnen-voorraad'); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><?php _e('Status', 'gordijnen-voorraad'); ?></th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="actief" value="1" <?php checked($locatie->is_actief()); ?>>
+                                <?php _e('Actief', 'gordijnen-voorraad'); ?>
+                            </label>
+                            <p class="description"><?php _e('Inactieve locaties kunnen niet worden geselecteerd bij het toevoegen van nieuwe rollen', 'gordijnen-voorraad'); ?></p>
+                        </td>
+                    </tr>
+                </table>
+                
+                <?php if ($id && $locatie->get_rollen_count() > 0): ?>
+                    <h2><?php _e('Rollen op deze locatie', 'gordijnen-voorraad'); ?></h2>
+                    <?php
+                    $rollen = $locatie->get_rollen();
+                    ?>
+                    <table class="wp-list-table widefat fixed striped">
+                        <thead>
+                            <tr>
+                                <th><?php _e('QR Code', 'gordijnen-voorraad'); ?></th>
+                                <th><?php _e('Collectie', 'gordijnen-voorraad'); ?></th>
+                                <th><?php _e('Kleur', 'gordijnen-voorraad'); ?></th>
+                                <th><?php _e('Meters', 'gordijnen-voorraad'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($rollen as $rol): ?>
+                                <tr>
+                                    <td><code><?php echo esc_html($rol->qr_code); ?></code></td>
+                                    <td><?php echo esc_html($rol->collectie_naam); ?></td>
+                                    <td><?php echo esc_html($rol->kleur_naam); ?></td>
+                                    <td><?php echo number_format($rol->meters, 2, ',', '.'); ?> m</td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+                
+                <p class="submit">
+                    <button type="submit" class="button button-primary"><?php _e('Opslaan', 'gordijnen-voorraad'); ?></button>
+                    <a href="<?php echo add_query_arg('page', 'gvs-locaties', admin_url('admin.php')); ?>" class="button">
+                        <?php _e('Annuleer', 'gordijnen-voorraad'); ?>
+                    </a>
+                </p>
+            </form>
+        </div>
+        <?php
+    }
+    
+    /**
+     * Show message
+     */
+    private function show_message() {
+        if (!isset($_GET['message'])) {
+            return;
+        }
+        
+        $messages = [
+            'saved' => __('Locatie opgeslagen', 'gordijnen-voorraad'),
+            'deleted' => __('Locatie verwijderd', 'gordijnen-voorraad'),
+        ];
+        
+        $message = isset($messages[$_GET['message']]) ? $messages[$_GET['message']] : '';
+        
+        if ($message) {
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($message) . '</p></div>';
+        }
+    }
+}
