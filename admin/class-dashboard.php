@@ -12,7 +12,7 @@ class GVS_Dashboard {
     public function render_page() {
         ?>
         <div class="wrap gvs-dashboard">
-            <h1><?php _e('Gordijnen Voorraad Dashboard', 'gordijnen-voorraad'); ?></h1>
+            <h1 style="margin-bottom: 40px;"><?php _e('Gordijnen Voorraad Dashboard', 'gordijnen-voorraad'); ?></h1>
             
             <div id="gvs-dashboard-loading" class="notice notice-info">
                 <p><?php _e('Dashboard wordt geladen...', 'gordijnen-voorraad'); ?></p>
@@ -34,11 +34,6 @@ class GVS_Dashboard {
                     <div class="gvs-stat-box">
                         <h3><?php _e('Rollen', 'gordijnen-voorraad'); ?></h3>
                         <div class="gvs-stat-number" id="stat-rollen">-</div>
-                    </div>
-                    
-                    <div class="gvs-stat-box">
-                        <h3><?php _e('Totaal Meters', 'gordijnen-voorraad'); ?></h3>
-                        <div class="gvs-stat-number" id="stat-meters">-</div>
                     </div>
                     
                     <div class="gvs-stat-box">
@@ -105,11 +100,10 @@ class GVS_Dashboard {
             });
             
             function updateDashboard(data) {
-                // Update statistics
+                // Update statistics (skip totaal_meters)
                 $('#stat-collecties').text(data.totaal_collecties);
                 $('#stat-kleuren').text(data.totaal_kleuren);
                 $('#stat-rollen').text(data.totaal_rollen);
-                $('#stat-meters').text(parseFloat(data.totaal_meters).toFixed(2) + ' m');
                 $('#stat-locaties').text(data.totaal_locaties);
                 $('#stat-lage-voorraad').text(data.lage_voorraad);
                 

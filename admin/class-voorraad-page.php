@@ -69,19 +69,37 @@ class GVS_Voorraad_Page {
             
             <!-- Results Table -->
             <div id="gvs-voorraad-table-wrapper">
-                <table class="wp-list-table widefat fixed striped">
+                <table class="wp-list-table widefat fixed striped gvs-sortable-table">
                     <thead>
                         <tr>
                             <td class="manage-column column-cb check-column">
                                 <input type="checkbox" id="cb-select-all">
                             </td>
-                            <th width="150"><?php _e('QR Code', 'gordijnen-voorraad'); ?></th>
-                            <th><?php _e('Collectie', 'gordijnen-voorraad'); ?></th>
-                            <th><?php _e('Kleur', 'gordijnen-voorraad'); ?></th>
-                            <th width="100"><?php _e('Meters', 'gordijnen-voorraad'); ?></th>
-                            <th width="100"><?php _e('Locatie', 'gordijnen-voorraad'); ?></th>
-                            <th width="150"><?php _e('Datum', 'gordijnen-voorraad'); ?></th>
-                            <th width="150"><?php _e('Acties', 'gordijnen-voorraad'); ?></th>
+                            <th class="sortable" data-sort="qr_code">
+                                <?php _e('QR Code', 'gordijnen-voorraad'); ?>
+                                <span class="sorting-indicator"></span>
+                            </th>
+                            <th class="sortable" data-sort="collectie">
+                                <?php _e('Collectie', 'gordijnen-voorraad'); ?>
+                                <span class="sorting-indicator"></span>
+                            </th>
+                            <th class="sortable" data-sort="kleur">
+                                <?php _e('Kleur', 'gordijnen-voorraad'); ?>
+                                <span class="sorting-indicator"></span>
+                            </th>
+                            <th class="sortable" data-sort="meters">
+                                <?php _e('Meters', 'gordijnen-voorraad'); ?>
+                                <span class="sorting-indicator"></span>
+                            </th>
+                            <th class="sortable" data-sort="locatie">
+                                <?php _e('Locatie', 'gordijnen-voorraad'); ?>
+                                <span class="sorting-indicator"></span>
+                            </th>
+                            <th class="sortable sorted desc" data-sort="created_at">
+                                <?php _e('Datum', 'gordijnen-voorraad'); ?>
+                                <span class="sorting-indicator"></span>
+                            </th>
+                            <th><?php _e('Acties', 'gordijnen-voorraad'); ?></th>
                         </tr>
                     </thead>
                     <tbody id="gvs-voorraad-tbody">
@@ -92,6 +110,44 @@ class GVS_Voorraad_Page {
                 </table>
             </div>
         </div>
+        
+        <!-- Add CSS for sortable columns -->
+        <style>
+        .gvs-sortable-table th.sortable {
+            cursor: pointer;
+            position: relative;
+            padding-right: 25px;
+        }
+        
+        .gvs-sortable-table th.sortable:hover {
+            background: #f0f0f0;
+        }
+        
+        .gvs-sortable-table th.sortable .sorting-indicator {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-style: solid;
+            visibility: hidden;
+        }
+        
+        .gvs-sortable-table th.sortable.sorted .sorting-indicator {
+            visibility: visible;
+        }
+        
+        .gvs-sortable-table th.sortable.sorted.asc .sorting-indicator {
+            border-width: 0 4px 6px 4px;
+            border-color: transparent transparent #333 transparent;
+        }
+        
+        .gvs-sortable-table th.sortable.sorted.desc .sorting-indicator {
+            border-width: 6px 4px 0 4px;
+            border-color: #333 transparent transparent transparent;
+        }
+        </style>
         
         <!-- Add Rollen Modal -->
         <div id="gvs-add-rollen-modal" class="gvs-modal" style="display:none;">
@@ -205,9 +261,34 @@ class GVS_Voorraad_Page {
         jQuery(document).ready(function($) {
             console.log('Voorraad page loaded');
             var currentFilters = {};
+            var currentSort = {
+                by: 'created_at',
+                order: 'DESC'
+            };
             
             // Load initial data
             loadVoorraad();
+            
+            // Sortable column click handler
+            $('.gvs-sortable-table th.sortable').on('click', function() {
+                var $th = $(this);
+                var sortBy = $th.data('sort');
+                
+                // Toggle sort order if clicking the same column
+                if (currentSort.by === sortBy) {
+                    currentSort.order = currentSort.order === 'ASC' ? 'DESC' : 'ASC';
+                } else {
+                    currentSort.by = sortBy;
+                    currentSort.order = 'ASC';
+                }
+                
+                // Update visual indicators
+                $('.gvs-sortable-table th.sortable').removeClass('sorted asc desc');
+                $th.addClass('sorted ' + currentSort.order.toLowerCase());
+                
+                // Reload data with new sort
+                loadVoorraad();
+            });
             
             // Filter button click
             $('#gvs-filter-btn').on('click', function() {
@@ -264,10 +345,12 @@ class GVS_Voorraad_Page {
                     collectie_id: $('#filter-collectie').val(),
                     kleur_id: $('#filter-kleur').val(),
                     locatie: $('#filter-locatie').val(),
-                    search: $('#filter-search').val()
+                    search: $('#filter-search').val(),
+                    sort_by: currentSort.by,
+                    sort_order: currentSort.order
                 };
                 
-                $('#gvs-voorraad-tbody').html('<tr><td colspan="7" class="loading"><?php _e('Laden...', 'gordijnen-voorraad'); ?></td></tr>');
+                $('#gvs-voorraad-tbody').html('<tr><td colspan="8" class="loading"><?php _e('Laden...', 'gordijnen-voorraad'); ?></td></tr>');
                 
                 $.ajax({
                     url: gvs_ajax.ajax_url,
@@ -281,11 +364,11 @@ class GVS_Voorraad_Page {
                         if (response.success) {
                             displayVoorraad(response.data);
                         } else {
-                            $('#gvs-voorraad-tbody').html('<tr><td colspan="7" class="error">' + response.data.message + '</td></tr>');
+                            $('#gvs-voorraad-tbody').html('<tr><td colspan="8" class="error">' + response.data.message + '</td></tr>');
                         }
                     },
                     error: function() {
-                        $('#gvs-voorraad-tbody').html('<tr><td colspan="7" class="error">' + gvs_ajax.strings.error + '</td></tr>');
+                        $('#gvs-voorraad-tbody').html('<tr><td colspan="8" class="error">' + gvs_ajax.strings.error + '</td></tr>');
                     }
                 });
             }

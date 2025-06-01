@@ -34,6 +34,9 @@ function gvs_ajax_get_kleuren_by_collectie() {
     wp_send_json_success($kleuren);
 }
 
+
+
+
 /**
  * Add new rollen
  */
@@ -82,7 +85,63 @@ function gvs_ajax_add_rollen() {
         'rollen' => $rollen_data
     ]);
 }
+// Add AJAX login handler for mobile
+add_action('wp_ajax_nopriv_gvs_mobile_login', 'gvs_ajax_mobile_login');
+add_action('wp_ajax_gvs_mobile_login', 'gvs_ajax_mobile_login');
 
+/**
+ * Handle mobile login
+ */
+function gvs_ajax_mobile_login() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'gvs_mobile_login')) {
+        wp_send_json_error(['message' => __('Beveiligingsfout', 'gordijnen-voorraad')]);
+    }
+    
+    $username = sanitize_text_field($_POST['username']);
+    $password = $_POST['password'];
+    
+    if (empty($username) || empty($password)) {
+        wp_send_json_error(['message' => __('Vul gebruikersnaam en wachtwoord in', 'gordijnen-voorraad')]);
+    }
+    
+    // Attempt to login
+    $creds = [
+        'user_login'    => $username,
+        'user_password' => $password,
+        'remember'      => true
+    ];
+    
+    $user = wp_signon($creds, is_ssl());
+    
+    if (is_wp_error($user)) {
+        $error_code = $user->get_error_code();
+        
+        // Custom error messages
+        $error_messages = [
+            'invalid_username' => __('Gebruikersnaam bestaat niet', 'gordijnen-voorraad'),
+            'incorrect_password' => __('Onjuist wachtwoord', 'gordijnen-voorraad'),
+            'empty_username' => __('Gebruikersnaam is verplicht', 'gordijnen-voorraad'),
+            'empty_password' => __('Wachtwoord is verplicht', 'gordijnen-voorraad')
+        ];
+        
+        $message = isset($error_messages[$error_code]) 
+            ? $error_messages[$error_code] 
+            : __('Ongeldige gebruikersnaam of wachtwoord', 'gordijnen-voorraad');
+            
+        wp_send_json_error(['message' => $message]);
+    }
+    
+    // Login successful
+    wp_set_current_user($user->ID);
+    wp_set_auth_cookie($user->ID, true);
+    
+    wp_send_json_success([
+        'message' => __('Inloggen succesvol', 'gordijnen-voorraad'),
+        'display_name' => $user->display_name,
+        'redirect' => home_url('/gvs-mobile/')
+    ]);
+}
 /**
  * Delete rol
  */
@@ -161,7 +220,7 @@ function gvs_ajax_scan_qr() {
 }
 
 /**
- * Search rollen
+ * Search rollen with sorting
  */
 function gvs_ajax_search_rollen() {
     check_ajax_referer('gvs_ajax_nonce', 'nonce');
@@ -173,8 +232,16 @@ function gvs_ajax_search_rollen() {
         'search' => isset($_POST['search']) ? sanitize_text_field($_POST['search']) : ''
     ];
     
+    // Sorteer parameters
+    $sort_by = isset($_POST['sort_by']) ? sanitize_text_field($_POST['sort_by']) : 'created_at';
+    $sort_order = isset($_POST['sort_order']) ? sanitize_text_field($_POST['sort_order']) : 'DESC';
+    
     // Remove empty filters
     $filters = array_filter($filters);
+    
+    // Add sorting to filters
+    $filters['sort_by'] = $sort_by;
+    $filters['sort_order'] = $sort_order;
     
     $rollen = GVS_Rol::get_all($filters);
     
@@ -257,3 +324,4 @@ function gvs_ajax_print_qr_codes() {
     echo GVS_QR_Generator::generate_bulk_print($rollen);
     exit;
 }
+

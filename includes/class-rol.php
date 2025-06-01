@@ -49,7 +49,7 @@ class GVS_Rol {
     }
     
     /**
-     * Get all rollen with filters
+     * Get all rollen with filters and sorting
      */
     public static function get_all($filters = []) {
         global $wpdb;
@@ -80,6 +80,24 @@ class GVS_Rol {
             $values[] = $search;
         }
         
+        // Sorteer opties
+        $sort_by = isset($filters['sort_by']) ? $filters['sort_by'] : 'r.created_at';
+        $sort_order = isset($filters['sort_order']) && in_array(strtoupper($filters['sort_order']), ['ASC', 'DESC']) 
+                      ? strtoupper($filters['sort_order']) : 'DESC';
+        
+        // Map sort fields to actual database columns
+        $sort_map = [
+            'qr_code' => 'r.qr_code',
+            'collectie' => 'c.naam',
+            'kleur' => 'k.kleur_naam',
+            'meters' => 'r.meters',
+            'locatie' => 'r.locatie',
+            'created_at' => 'r.created_at'
+        ];
+        
+        // Use mapped column or default
+        $order_by = isset($sort_map[$sort_by]) ? $sort_map[$sort_by] : 'r.created_at';
+        
         $where_clause = implode(' AND ', $where);
         $query = "
             SELECT r.*, k.kleur_naam, c.naam as collectie_naam, c.id as collectie_id
@@ -87,7 +105,7 @@ class GVS_Rol {
             JOIN {$wpdb->prefix}gvs_kleuren k ON r.kleur_id = k.id
             JOIN {$wpdb->prefix}gvs_collecties c ON k.collectie_id = c.id
             WHERE $where_clause
-            ORDER BY r.created_at DESC
+            ORDER BY $order_by $sort_order
         ";
         
         if (!empty($values)) {
@@ -181,10 +199,26 @@ class GVS_Rol {
         global $wpdb;
         $table = GVS_Database::get_table_name('rollen');
         
+        // Store rol data for notification
+        $rol_data = [
+            'kleur_id' => $this->kleur_id,
+            'qr_code' => $this->qr_code,
+            'meters' => $this->meters,
+            'locatie' => $this->locatie,
+            'user_id' => get_current_user_id()
+        ];
+        
         // Log transaction before delete
         $this->log_transaction('uitgaand');
         
-        return $wpdb->delete($table, ['id' => $this->id]) !== false;
+        $result = $wpdb->delete($table, ['id' => $this->id]) !== false;
+        
+        // Trigger action for stock check after successful deletion
+        if ($result) {
+            do_action('gvs_rol_deleted', $this->kleur_id, $rol_data);
+        }
+        
+        return $result;
     }
     
     /**

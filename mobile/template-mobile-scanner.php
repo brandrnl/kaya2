@@ -19,7 +19,7 @@
             min-height: 100vh;
         }
         
-        /* Splash Screen */
+        /* Splash Screen - Always visible first */
         .gvs-splash-screen {
             position: fixed;
             top: 0;
@@ -30,7 +30,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 9999;
+            z-index: 10000;
             transition: opacity 0.5s ease-out;
         }
         
@@ -56,7 +56,173 @@
             }
         }
         
-        /* Main App */
+        /* Login Screen */
+        .gvs-login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
+        }
+        
+        .gvs-login-screen.show {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .gvs-login-container {
+            width: 90%;
+            max-width: 400px;
+            padding: 40px 30px;
+            animation: slideUp 0.5s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .gvs-login-logo {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        
+        .gvs-login-logo img {
+            width: 150px;
+            height: auto;
+        }
+        
+        .gvs-login-form h2 {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 300;
+            margin-bottom: 40px;
+            letter-spacing: 1px;
+        }
+        
+        .gvs-form-group {
+            margin-bottom: 25px;
+            position: relative;
+        }
+        
+        .gvs-form-group input {
+            width: 100%;
+            padding: 15px 15px 15px 45px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .gvs-form-group input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+        
+        .gvs-form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .gvs-form-group .icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            opacity: 0.5;
+        }
+        
+        .gvs-form-group .icon svg {
+            width: 100%;
+            height: 100%;
+            fill: #fff;
+        }
+        
+        .gvs-login-button {
+            width: 100%;
+            padding: 16px;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 30px;
+        }
+        
+        .gvs-login-button:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-2px);
+        }
+        
+        .gvs-login-button:active {
+            transform: translateY(0);
+        }
+        
+        .gvs-login-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .gvs-login-error {
+            background: rgba(220, 53, 69, 0.2);
+            border: 1px solid #dc3545;
+            color: #ff6b6b;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        
+        .gvs-login-error.show {
+            display: block;
+        }
+        
+        .gvs-login-footer {
+            text-align: center;
+            margin-top: 40px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+        }
+        
+        /* Main App (hidden initially) */
+        .gvs-main-app {
+            display: none;
+        }
+        
+        .gvs-main-app.active {
+            display: block;
+        }
+        
         .gvs-mobile-header {
             background: #000;
             color: #fff;
@@ -82,33 +248,35 @@
             padding: 20px;
             min-height: calc(100vh - 60px);
         }
+        
         /* Verberg originele Engelse tekst en voeg Nederlandse tekst toe */
-#html5-qrcode-button-camera-permission {
-    font-size: 0 !important;
-}
+        #html5-qrcode-button-camera-permission {
+            font-size: 0 !important;
+        }
 
-#html5-qrcode-button-camera-permission:after {
-    content: 'Camera Toestemming Vragen';
-    font-size: 16px;
-}
+        #html5-qrcode-button-camera-permission:after {
+            content: 'Camera Toestemming Vragen';
+            font-size: 16px;
+        }
 
-#html5-qrcode-button-camera-start {
-    font-size: 0 !important;
-}
+        #html5-qrcode-button-camera-start {
+            font-size: 0 !important;
+        }
 
-#html5-qrcode-button-camera-start:after {
-    content: 'Start Scannen';
-    font-size: 16px;
-}
+        #html5-qrcode-button-camera-start:after {
+            content: 'Start Scannen';
+            font-size: 16px;
+        }
 
-#html5-qrcode-button-camera-stop {
-    font-size: 0 !important;
-}
+        #html5-qrcode-button-camera-stop {
+            font-size: 0 !important;
+        }
 
-#html5-qrcode-button-camera-stop:after {
-    content: 'Stop Scannen';
-    font-size: 16px;
-}
+        #html5-qrcode-button-camera-stop:after {
+            content: 'Stop Scannen';
+            font-size: 16px;
+        }
+        
         .gvs-scanner-section {
             background: #fff;
             border-radius: 0;
@@ -388,124 +556,194 @@
     </style>
 </head>
 <body>
-    <!-- Splash Screen -->
+    <!-- Splash Screen (Always shows first) -->
     <div class="gvs-splash-screen" id="splashScreen">
         <img src="https://kayaexclusive.com/wp-content/uploads/2025/05/logo-wit.svg" alt="Kaya" class="gvs-splash-logo">
     </div>
     
+    <!-- Login Screen -->
+    <div class="gvs-login-screen" id="loginScreen">
+        <div class="gvs-login-container">
+            <div class="gvs-login-logo">
+                <img src="https://kayaexclusive.com/wp-content/uploads/2025/05/logo-wit.svg" alt="Kaya">
+            </div>
+            
+            <form id="gvs-login-form" class="gvs-login-form">
+                <h2><?php _e('Inloggen', 'gordijnen-voorraad'); ?></h2>
+                
+                <div class="gvs-login-error" id="loginError"></div>
+                
+                <div class="gvs-form-group">
+                    <span class="icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                    </span>
+                    <input type="text" id="username" name="username" placeholder="<?php _e('Gebruikersnaam', 'gordijnen-voorraad'); ?>" required autocomplete="username">
+                </div>
+                
+                <div class="gvs-form-group">
+                    <span class="icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                        </svg>
+                    </span>
+                    <input type="password" id="password" name="password" placeholder="<?php _e('Wachtwoord', 'gordijnen-voorraad'); ?>" required autocomplete="current-password">
+                </div>
+                
+                <button type="submit" class="gvs-login-button" id="loginButton">
+                    <?php _e('INLOGGEN', 'gordijnen-voorraad'); ?>
+                </button>
+            </form>
+            
+            <div class="gvs-login-footer">
+                <p><?php _e('Kaya Voorraad Scanner', 'gordijnen-voorraad'); ?></p>
+            </div>
+        </div>
+    </div>
+    
     <!-- Main App -->
-    <div class="gvs-mobile-header">
-        <h1><?php _e('Kaya Scanner', 'gordijnen-voorraad'); ?></h1>
-        <div class="gvs-user-info">
-            <?php 
-            if (is_user_logged_in()) {
-                $current_user = wp_get_current_user();
-                echo esc_html($current_user->display_name);
-            } else {
-                echo 'Niet ingelogd';
-            }
-            ?>
-        </div>
-    </div>
-    
-    <div class="gvs-mobile-container">
-        <div id="gvs-messages"></div>
-        
-        <div class="gvs-scanner-section">
-            <div class="gvs-scanner-controls">
-                <button id="start-scan" class="gvs-btn gvs-btn-primary" style="flex: 1;">
-                    <?php _e('Start Scanner', 'gordijnen-voorraad'); ?>
-                </button>
-                <button id="stop-scan" class="gvs-btn gvs-btn-secondary" style="display: none; flex: 1;">
-                    <?php _e('Stop Scanner', 'gordijnen-voorraad'); ?>
-                </button>
-            </div>
-            
-            <div id="qr-reader"></div>
+    <div class="gvs-main-app" id="mainApp">
+        <div class="gvs-mobile-header">
+            <h1><?php _e('Kaya Scanner', 'gordijnen-voorraad'); ?></h1>
+            <div class="gvs-user-info" id="userInfo"></div>
         </div>
         
-        <div id="scan-result" class="gvs-scan-result">
-            <div class="gvs-result-header">
-                <div class="gvs-result-icon">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                    </svg>
+        <div class="gvs-mobile-container">
+            <div id="gvs-messages"></div>
+            
+            <div class="gvs-scanner-section">
+                <div class="gvs-scanner-controls">
+                    <button id="start-scan" class="gvs-btn gvs-btn-primary" style="flex: 1;">
+                        <?php _e('Start Scanner', 'gordijnen-voorraad'); ?>
+                    </button>
+                    <button id="stop-scan" class="gvs-btn gvs-btn-secondary" style="display: none; flex: 1;">
+                        <?php _e('Stop Scanner', 'gordijnen-voorraad'); ?>
+                    </button>
                 </div>
-                <div class="gvs-result-title"><?php _e('Rol Gevonden', 'gordijnen-voorraad'); ?></div>
+                
+                <div id="qr-reader"></div>
             </div>
             
-            <div class="gvs-result-details">
-                <div class="gvs-detail-row">
-                    <span class="gvs-detail-label"><?php _e('QR Code', 'gordijnen-voorraad'); ?></span>
-                    <span class="gvs-detail-value" id="result-qr"></span>
+            <div id="scan-result" class="gvs-scan-result">
+                <div class="gvs-result-header">
+                    <div class="gvs-result-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                        </svg>
+                    </div>
+                    <div class="gvs-result-title"><?php _e('Rol Gevonden', 'gordijnen-voorraad'); ?></div>
                 </div>
-                <div class="gvs-detail-row">
-                    <span class="gvs-detail-label"><?php _e('Collectie', 'gordijnen-voorraad'); ?></span>
-                    <span class="gvs-detail-value" id="result-collectie"></span>
+                
+                <div class="gvs-result-details">
+                    <div class="gvs-detail-row">
+                        <span class="gvs-detail-label"><?php _e('QR Code', 'gordijnen-voorraad'); ?></span>
+                        <span class="gvs-detail-value" id="result-qr"></span>
+                    </div>
+                    <div class="gvs-detail-row">
+                        <span class="gvs-detail-label"><?php _e('Collectie', 'gordijnen-voorraad'); ?></span>
+                        <span class="gvs-detail-value" id="result-collectie"></span>
+                    </div>
+                    <div class="gvs-detail-row">
+                        <span class="gvs-detail-label"><?php _e('Kleur', 'gordijnen-voorraad'); ?></span>
+                        <span class="gvs-detail-value" id="result-kleur"></span>
+                    </div>
+                    <div class="gvs-detail-row">
+                        <span class="gvs-detail-label"><?php _e('Meters', 'gordijnen-voorraad'); ?></span>
+                        <span class="gvs-detail-value" id="result-meters"></span>
+                    </div>
+                    <div class="gvs-detail-row">
+                        <span class="gvs-detail-label"><?php _e('Locatie', 'gordijnen-voorraad'); ?></span>
+                        <span class="gvs-detail-value" id="result-locatie"></span>
+                    </div>
+                    <div class="gvs-detail-row">
+                        <span class="gvs-detail-label"><?php _e('Datum', 'gordijnen-voorraad'); ?></span>
+                        <span class="gvs-detail-value" id="result-datum"></span>
+                    </div>
                 </div>
-                <div class="gvs-detail-row">
-                    <span class="gvs-detail-label"><?php _e('Kleur', 'gordijnen-voorraad'); ?></span>
-                    <span class="gvs-detail-value" id="result-kleur"></span>
+                
+                <div class="gvs-actions">
+                    <button id="uitgeven-btn" class="gvs-btn gvs-btn-primary">
+                        <?php _e('Rol Uitgeven', 'gordijnen-voorraad'); ?>
+                    </button>
+                    <button id="new-scan-btn" class="gvs-btn gvs-btn-secondary">
+                        <?php _e('Nieuwe Scan', 'gordijnen-voorraad'); ?>
+                    </button>
                 </div>
-                <div class="gvs-detail-row">
-                    <span class="gvs-detail-label"><?php _e('Meters', 'gordijnen-voorraad'); ?></span>
-                    <span class="gvs-detail-value" id="result-meters"></span>
-                </div>
-                <div class="gvs-detail-row">
-                    <span class="gvs-detail-label"><?php _e('Locatie', 'gordijnen-voorraad'); ?></span>
-                    <span class="gvs-detail-value" id="result-locatie"></span>
-                </div>
-                <div class="gvs-detail-row">
-                    <span class="gvs-detail-label"><?php _e('Datum', 'gordijnen-voorraad'); ?></span>
-                    <span class="gvs-detail-value" id="result-datum"></span>
-                </div>
-            </div>
-            
-            <div class="gvs-actions">
-                <button id="uitgeven-btn" class="gvs-btn gvs-btn-primary">
-                    <?php _e('Rol Uitgeven', 'gordijnen-voorraad'); ?>
-                </button>
-                <button id="new-scan-btn" class="gvs-btn gvs-btn-secondary">
-                    <?php _e('Nieuwe Scan', 'gordijnen-voorraad'); ?>
-                </button>
             </div>
         </div>
     </div>
-    
-    <!-- Debug Info (verborgen) -->
-    <div id="debug-info" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #000; color: #0f0; font-family: monospace; font-size: 10px; padding: 10px; max-height: 200px; overflow-y: auto;">
-        <div id="debug-log"></div>
-    </div>
-    
-    <script>
-    // Debug helper
-    window.debugLog = function(msg) {
-        const log = document.getElementById('debug-log');
-        const time = new Date().toLocaleTimeString();
-        log.innerHTML = time + ': ' + msg + '<br>' + log.innerHTML;
-    };
-    
-    // Toon debug info door 5x snel te tikken op de header
-    let tapCount = 0;
-    let tapTimer;
-    document.querySelector('.gvs-mobile-header').addEventListener('click', function() {
-        tapCount++;
-        clearTimeout(tapTimer);
-        tapTimer = setTimeout(() => tapCount = 0, 500);
-        
-        if (tapCount >= 5) {
-            document.getElementById('debug-info').style.display = 
-                document.getElementById('debug-info').style.display === 'none' ? 'block' : 'none';
-            tapCount = 0;
-        }
-    });
-    
-    // Hide splash screen after 3 seconds
-    setTimeout(function() {
-        document.getElementById('splashScreen').classList.add('fade-out');
-    }, 3000);
-    </script>
     
     <?php wp_footer(); ?>
+    
+    <script>
+    // Custom login handler
+    jQuery(document).ready(function($) {
+        let splashMinTime = 2000; // Minimum tijd splash screen
+        let splashStartTime = Date.now();
+        
+        // Check if user is already logged in
+        const isLoggedIn = <?php echo is_user_logged_in() ? 'true' : 'false'; ?>;
+        const currentUser = <?php echo is_user_logged_in() ? json_encode(wp_get_current_user()->display_name) : 'null'; ?>;
+        
+        // Wait for minimum splash time
+        setTimeout(function() {
+            $('#splashScreen').addClass('fade-out');
+            
+            setTimeout(function() {
+                if (isLoggedIn) {
+                    // User is logged in, show main app
+                    $('#userInfo').text(currentUser);
+                    $('#mainApp').addClass('active');
+                } else {
+                    // Show login screen
+                    $('#loginScreen').addClass('show');
+                }
+            }, 500);
+        }, splashMinTime);
+        
+        // Handle login form
+        $('#gvs-login-form').on('submit', function(e) {
+            e.preventDefault();
+            
+            const $form = $(this);
+            const $button = $('#loginButton');
+            const $error = $('#loginError');
+            
+            // Disable button and show loading
+            $button.prop('disabled', true).html('<span class="gvs-loader"></span> <?php _e('BEZIG...', 'gordijnen-voorraad'); ?>');
+            $error.removeClass('show');
+            
+            // Perform AJAX login
+            $.ajax({
+                url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                type: 'POST',
+                data: {
+                    action: 'gvs_mobile_login',
+                    username: $('#username').val(),
+                    password: $('#password').val(),
+                    nonce: '<?php echo wp_create_nonce('gvs_mobile_login'); ?>'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Login successful
+                        $('#userInfo').text(response.data.display_name);
+                        $('#loginScreen').fadeOut(300, function() {
+                            $('#mainApp').addClass('active');
+                        });
+                    } else {
+                        // Show error
+                        $error.text(response.data.message || '<?php _e('Ongeldige gebruikersnaam of wachtwoord', 'gordijnen-voorraad'); ?>').addClass('show');
+                        $button.prop('disabled', false).text('<?php _e('INLOGGEN', 'gordijnen-voorraad'); ?>');
+                    }
+                },
+                error: function() {
+                    $error.text('<?php _e('Verbindingsfout. Probeer het opnieuw.', 'gordijnen-voorraad'); ?>').addClass('show');
+                    $button.prop('disabled', false).text('<?php _e('INLOGGEN', 'gordijnen-voorraad'); ?>');
+                }
+            });
+        });
+    });
+    </script>
 </body>
 </html>

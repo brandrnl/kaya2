@@ -123,7 +123,33 @@ class GVS_Settings_Page {
                             <input type="email" id="gvs_warning_email" name="gvs_warning_email" 
                                    value="<?php echo esc_attr(get_option('gvs_warning_email', get_option('admin_email'))); ?>" 
                                    class="regular-text">
-                            <p class="description"><?php _e('E-mailadres voor lage voorraad notificaties (nog niet geïmplementeerd)', 'gordijnen-voorraad'); ?></p>
+                            <p class="description"><?php _e('E-mailadres voor directe lage voorraad notificaties', 'gordijnen-voorraad'); ?></p>
+                            <p style="margin-top: 10px;">
+                                <button type="button" id="gvs-test-email" class="button">
+                                    <?php _e('Test E-mail Verzenden', 'gordijnen-voorraad'); ?>
+                                </button>
+                                <span id="gvs-test-email-result" style="margin-left: 10px;"></span>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <th scope="row"><?php _e('Notificatie Status', 'gordijnen-voorraad'); ?></th>
+                        <td>
+                            <?php 
+                            $last_sent = get_option('gvs_last_notification_sent');
+                            if ($last_sent) {
+                                echo '<p>' . sprintf(
+                                    __('Laatste notificatie verzonden: %s', 'gordijnen-voorraad'),
+                                    date_i18n('d-m-Y H:i', strtotime($last_sent))
+                                ) . '</p>';
+                            } else {
+                                echo '<p>' . __('Nog geen notificaties verzonden', 'gordijnen-voorraad') . '</p>';
+                            }
+                            ?>
+                            <p class="description">
+                                <?php _e('E-mails worden automatisch verzonden wanneer de voorraad onder het minimum komt bij het uitgeven van een rol.', 'gordijnen-voorraad'); ?>
+                            </p>
                         </td>
                     </tr>
                 </table>
@@ -200,6 +226,47 @@ class GVS_Settings_Page {
                 </tr>
             </table>
         </div>
+        
+        <script>
+        jQuery(document).ready(function($) {
+            // Test email button
+            $('#gvs-test-email').on('click', function() {
+                var $button = $(this);
+                var $result = $('#gvs-test-email-result');
+                var originalText = $button.text();
+                
+                $button.prop('disabled', true).text('<?php _e('Verzenden...', 'gordijnen-voorraad'); ?>');
+                $result.html('');
+                
+                $.ajax({
+                    url: ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'gvs_send_test_email',
+                        nonce: '<?php echo wp_create_nonce('gvs_ajax_nonce'); ?>'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            $result.html('<span style="color: green;">✓ ' + response.data.message + '</span>');
+                        } else {
+                            $result.html('<span style="color: red;">✗ ' + response.data.message + '</span>');
+                        }
+                    },
+                    error: function() {
+                        $result.html('<span style="color: red;">✗ <?php _e('Fout bij verzenden', 'gordijnen-voorraad'); ?></span>');
+                    },
+                    complete: function() {
+                        $button.prop('disabled', false).text(originalText);
+                        
+                        // Clear message after 5 seconds
+                        setTimeout(function() {
+                            $result.fadeOut();
+                        }, 5000);
+                    }
+                });
+            });
+        });
+        </script>
         <?php
     }
     

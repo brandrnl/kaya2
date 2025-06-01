@@ -53,10 +53,12 @@ class GVS_Mobile_Scanner {
         );
         
         // BELANGRIJK: Zorg dat AJAX URL en nonce correct worden doorgegeven
+        // En voeg is_user_logged_in toe voor de scanner
         wp_localize_script('gvs-mobile-scanner', 'gvs_mobile', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('gvs_ajax_nonce'),
-            'is_logged_in' => is_user_logged_in(),
+            'is_logged_in' => is_user_logged_in() ? 'true' : 'false',
+            'user_id' => get_current_user_id(),
             'strings' => [
                 'scanning' => __('Scannen...', 'gordijnen-voorraad'),
                 'scan_success' => __('Scan succesvol!', 'gordijnen-voorraad'),
@@ -65,7 +67,9 @@ class GVS_Mobile_Scanner {
                 'confirm_delete' => __('Weet u zeker dat u deze rol wilt uitgeven?', 'gordijnen-voorraad'),
                 'deleted' => __('Rol uitgegeven', 'gordijnen-voorraad'),
                 'error' => __('Er is een fout opgetreden', 'gordijnen-voorraad'),
-                'processing' => __('Bezig...', 'gordijnen-voorraad')
+                'processing' => __('Bezig...', 'gordijnen-voorraad'),
+                'connection_error' => __('Verbindingsfout. Controleer uw internetverbinding.', 'gordijnen-voorraad'),
+                'not_logged_in' => __('U moet ingelogd zijn om te scannen', 'gordijnen-voorraad')
             ]
         ]);
     }
@@ -82,7 +86,7 @@ class GVS_Mobile_Scanner {
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <meta name="theme-color" content="#2271b1">
+        <meta name="theme-color" content="#000000">
         <link rel="manifest" href="<?php echo GVS_PLUGIN_URL; ?>mobile/manifest.json">
         
         <!-- Debug info -->
@@ -90,6 +94,7 @@ class GVS_Mobile_Scanner {
         console.log('GVS Mobile Scanner loaded');
         console.log('AJAX URL:', '<?php echo admin_url('admin-ajax.php'); ?>');
         console.log('User logged in:', <?php echo is_user_logged_in() ? 'true' : 'false'; ?>);
+        console.log('User ID:', <?php echo get_current_user_id(); ?>);
         </script>
         <?php
     }

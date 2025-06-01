@@ -50,6 +50,7 @@ function gvs_load_plugin() {
     require_once GVS_PLUGIN_DIR . 'includes/class-locatie.php';
     require_once GVS_PLUGIN_DIR . 'includes/class-rol.php';
     require_once GVS_PLUGIN_DIR . 'includes/class-qr-generator.php';
+    require_once GVS_PLUGIN_DIR . 'includes/class-stock-notifications.php';
     require_once GVS_PLUGIN_DIR . 'includes/ajax-handlers.php';
     
     // Load admin
@@ -80,9 +81,8 @@ function gvs_query_vars($vars) {
 add_action('template_redirect', 'gvs_mobile_template');
 function gvs_mobile_template() {
     if (get_query_var('gvs_mobile')) {
-        if (!is_user_logged_in()) {
-            auth_redirect();
-        }
+        // Verwijder de automatische redirect naar login
+        // We handelen login nu in de template zelf af
         include GVS_PLUGIN_DIR . 'mobile/template-mobile-scanner.php';
         exit;
     }
