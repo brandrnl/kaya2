@@ -5,13 +5,67 @@ jQuery(document).ready(function($) {
     let lastScannedCode = null;
     let currentRolId = null;
     
-    // Initialize scanner
+    // Success scan sound
+    function playSuccessSound() {
+        // Create audio context for beep sound
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Create oscillator for beep
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        // Configure the beep sound
+        oscillator.frequency.value = 1000; // High pitch beep
+        oscillator.type = 'sine';
+        
+        // Fade in and out for smooth sound
+        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+        gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.1);
+        
+        // Play the beep
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.1);
+        
+        // Second beep after 150ms
+        setTimeout(() => {
+            const oscillator2 = audioContext.createOscillator();
+            const gainNode2 = audioContext.createGain();
+            
+            oscillator2.connect(gainNode2);
+            gainNode2.connect(audioContext.destination);
+            
+            oscillator2.frequency.value = 1500; // Higher pitch for second beep
+            oscillator2.type = 'sine';
+            
+            gainNode2.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode2.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
+            gainNode2.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.1);
+            
+            oscillator2.start(audioContext.currentTime);
+            oscillator2.stop(audioContext.currentTime + 0.1);
+        }, 150);
+    }
+    
+    // Wait for splash screen to disappear
+    setTimeout(function() {
+        console.log('Mobile scanner ready');
+    }, 3500);
+    
+    // Initialize scanner with back camera only
     function initScanner() {
         const config = {
             fps: 10,
             qrbox: { width: 250, height: 250 },
             rememberLastUsedCamera: true,
-            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+            // Force gebruik van achtercamera
+            aspectRatio: 1.0,
+            showTorchButtonIfSupported: true,
+            defaultZoomValueIfSupported: 1.5
         };
         
         html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", config);
@@ -19,8 +73,90 @@ jQuery(document).ready(function($) {
     
     // Start scanning
     function startScanning() {
+        // Check if first time (camera permission not yet granted)
+        if (!localStorage.getItem('gvs_camera_permission_shown')) {
+            showMessage(
+                '<strong>Camera toegang vereist</strong><br>' +
+                'Om QR codes te scannen heeft deze app toegang tot uw camera nodig. ' +
+                'Klik op "Toestaan" wanneer uw browser om toestemming vraagt.',
+                'info'
+            );
+            localStorage.setItem('gvs_camera_permission_shown', 'true');
+        }
+        
         if (html5QrcodeScanner) {
+            // Custom success and error handlers
+            const onScanSuccess = function(decodedText, decodedResult) {
+                onScanSuccessHandler(decodedText, decodedResult);
+            };
+            
+            const onScanError = function(errorMessage) {
+                // Check for specific permission errors
+                if (errorMessage.includes('NotAllowedError')) {
+                    showMessage('Camera toegang geweigerd. Controleer uw browser instellingen.', 'error');
+                    stopScanning();
+                } else if (errorMessage.includes('NotFoundError')) {
+                    showMessage('Geen camera gevonden op dit apparaat.', 'error');
+                    stopScanning();
+                }
+                // Ignore other errors - they happen frequently during scanning
+            };
+            
+            // Override render to use back camera
             html5QrcodeScanner.render(onScanSuccess, onScanError);
+            
+            // Force select back camera after render
+            setTimeout(function() {
+                Html5Qrcode.getCameras().then(devices => {
+                    if (devices && devices.length > 0) {
+                        // Find back camera
+                        let backCameraId = null;
+                        
+                        devices.forEach(device => {
+                            if (device.label.toLowerCase().includes('back') || 
+                                device.label.toLowerCase().includes('rear') ||
+                                device.label.toLowerCase().includes('environment')) {
+                                backCameraId = device.id;
+                            }
+                        });
+                        
+                        // If no back camera found, use last camera (usually back on mobile)
+                        if (!backCameraId && devices.length > 1) {
+                            backCameraId = devices[devices.length - 1].id;
+                        }
+                        
+                        // If we found a back camera, restart with it
+                        if (backCameraId) {
+                            html5QrcodeScanner.clear();
+                            
+                            const html5Qrcode = new Html5Qrcode("qr-reader");
+                            html5Qrcode.start(
+                                backCameraId,
+                                {
+                                    fps: 10,
+                                    qrbox: { width: 250, height: 250 }
+                                },
+                                onScanSuccess,
+                                onScanError
+                            ).then(() => {
+                                $('#start-scan').hide();
+                                $('#stop-scan').show();
+                                showMessage(gvs_mobile.strings.scanning, 'info');
+                                
+                                // Store instance for stopping later
+                                window.html5QrcodeInstance = html5Qrcode;
+                            }).catch(err => {
+                                console.error('Failed to start with back camera:', err);
+                                showMessage('Kan camera niet starten. Probeer opnieuw.', 'error');
+                            });
+                        }
+                    }
+                }).catch(err => {
+                    console.error('Unable to get cameras:', err);
+                    showMessage('Kan geen camera\'s vinden op dit apparaat.', 'error');
+                });
+            }, 500);
+            
             $('#start-scan').hide();
             $('#stop-scan').show();
             showMessage(gvs_mobile.strings.scanning, 'info');
@@ -29,16 +165,24 @@ jQuery(document).ready(function($) {
     
     // Stop scanning
     function stopScanning() {
-        if (html5QrcodeScanner) {
+        if (window.html5QrcodeInstance) {
+            window.html5QrcodeInstance.stop().then(() => {
+                window.html5QrcodeInstance.clear();
+                window.html5QrcodeInstance = null;
+            }).catch(err => {
+                console.error('Error stopping scanner:', err);
+            });
+        } else if (html5QrcodeScanner) {
             html5QrcodeScanner.clear();
-            $('#start-scan').show();
-            $('#stop-scan').hide();
-            clearMessages();
         }
+        
+        $('#start-scan').show();
+        $('#stop-scan').hide();
+        clearMessages();
     }
     
     // On successful scan
-    function onScanSuccess(decodedText, decodedResult) {
+    function onScanSuccessHandler(decodedText, decodedResult) {
         // Prevent duplicate scans
         if (decodedText === lastScannedCode) {
             return;
@@ -49,6 +193,13 @@ jQuery(document).ready(function($) {
         // Vibrate if available
         if (navigator.vibrate) {
             navigator.vibrate(200);
+        }
+        
+        // Play success sound
+        try {
+            playSuccessSound();
+        } catch (e) {
+            console.log('Could not play sound:', e);
         }
         
         // Stop scanner
@@ -83,11 +234,6 @@ jQuery(document).ready(function($) {
                 }, 2000);
             }
         });
-    }
-    
-    // On scan error
-    function onScanError(errorMessage) {
-        // Ignore errors - they happen frequently during scanning
     }
     
     // Display rol information
@@ -169,6 +315,13 @@ jQuery(document).ready(function($) {
                     // Vibrate success pattern
                     if (navigator.vibrate) {
                         navigator.vibrate([100, 50, 100]);
+                    }
+                    
+                    // Play success sound for deletion
+                    try {
+                        playSuccessSound();
+                    } catch (e) {
+                        console.log('Could not play sound:', e);
                     }
                     
                     setTimeout(function() {

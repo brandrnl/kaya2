@@ -10,6 +10,20 @@ class GVS_Collectie_Page {
      * Render page
      */
     public function render_page() {
+        // Check for delete action in GET (zoals WordPress standaard doet)
+        if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+            check_admin_referer('delete_collectie_' . $_GET['id']);
+            $this->delete_collectie($_GET['id']);
+            return;
+        }
+        
+        // Check for delete kleur action
+        if (isset($_GET['action']) && $_GET['action'] === 'delete_kleur' && isset($_GET['kleur_id'])) {
+            check_admin_referer('delete_kleur_' . $_GET['kleur_id']);
+            $this->delete_kleur($_GET['kleur_id'], $_GET['collectie_id']);
+            return;
+        }
+        
         // Handle form submissions
         $this->handle_actions();
         
@@ -48,14 +62,8 @@ class GVS_Collectie_Page {
             case 'save':
                 $this->save_collectie();
                 break;
-            case 'delete':
-                $this->delete_collectie();
-                break;
             case 'save_kleur':
                 $this->save_kleur();
-                break;
-            case 'delete_kleur':
-                $this->delete_kleur();
                 break;
         }
     }
@@ -76,10 +84,7 @@ class GVS_Collectie_Page {
         $collectie->set_beschrijving($_POST['beschrijving']);
         
         if ($collectie->save()) {
-            wp_redirect(add_query_arg([
-                'page' => 'gvs-collecties',
-                'message' => 'saved'
-            ], admin_url('admin.php')));
+            wp_redirect(admin_url('admin.php?page=gvs-collecties&message=saved'));
             exit;
         }
     }
@@ -87,19 +92,19 @@ class GVS_Collectie_Page {
     /**
      * Delete collectie
      */
-    private function delete_collectie() {
-        $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+    private function delete_collectie($id) {
+        $id = intval($id);
         
         if ($id) {
             $collectie = GVS_Collectie::get_by_id($id);
             if ($collectie && $collectie->delete()) {
-                wp_redirect(add_query_arg([
-                    'page' => 'gvs-collecties',
-                    'message' => 'deleted'
-                ], admin_url('admin.php')));
+                wp_redirect(admin_url('admin.php?page=gvs-collecties&message=deleted'));
                 exit;
             }
         }
+        
+        wp_redirect(admin_url('admin.php?page=gvs-collecties&message=error'));
+        exit;
     }
     
     /**
@@ -121,12 +126,7 @@ class GVS_Collectie_Page {
         $kleur->set_min_voorraad_meters($_POST['min_voorraad_meters']);
         
         if ($kleur->save()) {
-            wp_redirect(add_query_arg([
-                'page' => 'gvs-collecties',
-                'action' => 'kleuren',
-                'id' => $collectie_id,
-                'message' => 'kleur_saved'
-            ], admin_url('admin.php')));
+            wp_redirect(admin_url('admin.php?page=gvs-collecties&action=kleuren&id=' . $collectie_id . '&message=kleur_saved'));
             exit;
         }
     }
@@ -134,22 +134,20 @@ class GVS_Collectie_Page {
     /**
      * Delete kleur
      */
-    private function delete_kleur() {
-        $kleur_id = isset($_GET['kleur_id']) ? intval($_GET['kleur_id']) : 0;
-        $collectie_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+    private function delete_kleur($kleur_id, $collectie_id) {
+        $kleur_id = intval($kleur_id);
+        $collectie_id = intval($collectie_id);
         
         if ($kleur_id) {
             $kleur = GVS_Kleur::get_by_id($kleur_id);
             if ($kleur && $kleur->delete()) {
-                wp_redirect(add_query_arg([
-                    'page' => 'gvs-collecties',
-                    'action' => 'kleuren',
-                    'id' => $collectie_id,
-                    'message' => 'kleur_deleted'
-                ], admin_url('admin.php')));
+                wp_redirect(admin_url('admin.php?page=gvs-collecties&action=kleuren&id=' . $collectie_id . '&message=kleur_deleted'));
                 exit;
             }
         }
+        
+        wp_redirect(admin_url('admin.php?page=gvs-collecties&action=kleuren&id=' . $collectie_id . '&message=error'));
+        exit;
     }
     
     /**
@@ -161,7 +159,7 @@ class GVS_Collectie_Page {
         <div class="wrap">
             <h1>
                 <?php _e('Collecties', 'gordijnen-voorraad'); ?>
-                <a href="<?php echo add_query_arg('action', 'new'); ?>" class="page-title-action">
+                <a href="<?php echo admin_url('admin.php?page=gvs-collecties&action=new'); ?>" class="page-title-action">
                     <?php _e('Nieuwe Collectie', 'gordijnen-voorraad'); ?>
                 </a>
             </h1>
@@ -195,16 +193,22 @@ class GVS_Collectie_Page {
                                 <td><?php echo intval($collectie->aantal_rollen); ?></td>
                                 <td><?php echo number_format($collectie->totaal_meters, 2, ',', '.'); ?> m</td>
                                 <td>
-                                    <a href="<?php echo add_query_arg(['action' => 'kleuren', 'id' => $collectie->id]); ?>" class="button button-small">
+                                    <a href="<?php echo admin_url('admin.php?page=gvs-collecties&action=kleuren&id=' . $collectie->id); ?>" class="button button-small">
                                         <?php _e('Kleuren', 'gordijnen-voorraad'); ?>
                                     </a>
-                                    <a href="<?php echo add_query_arg(['action' => 'edit', 'id' => $collectie->id]); ?>" class="button button-small">
+                                    <a href="<?php echo admin_url('admin.php?page=gvs-collecties&action=edit&id=' . $collectie->id); ?>" class="button button-small">
                                         <?php _e('Bewerk', 'gordijnen-voorraad'); ?>
                                     </a>
                                     <?php if ($collectie->aantal_rollen == 0): ?>
-                                        <a href="<?php echo wp_nonce_url(add_query_arg(['action' => 'delete', 'id' => $collectie->id]), 'gvs_collectie_action'); ?>" 
-                                           class="button button-small gvs-delete-btn"
-                                           onclick="return confirm('<?php esc_attr_e('Weet u zeker dat u deze collectie wilt verwijderen?', 'gordijnen-voorraad'); ?>')">
+                                        <?php
+                                        $delete_url = wp_nonce_url(
+                                            admin_url('admin.php?page=gvs-collecties&action=delete&id=' . $collectie->id),
+                                            'delete_collectie_' . $collectie->id
+                                        );
+                                        ?>
+                                        <a href="<?php echo $delete_url; ?>" 
+                                           class="button button-small"
+                                           onclick="return confirm('<?php esc_attr_e('Weet u zeker dat u deze collectie wilt verwijderen?', 'gordijnen-voorraad'); ?>');">
                                             <?php _e('Verwijder', 'gordijnen-voorraad'); ?>
                                         </a>
                                     <?php endif; ?>
@@ -253,7 +257,7 @@ class GVS_Collectie_Page {
                 
                 <p class="submit">
                     <button type="submit" class="button button-primary"><?php _e('Opslaan', 'gordijnen-voorraad'); ?></button>
-                    <a href="<?php echo add_query_arg('page', 'gvs-collecties', admin_url('admin.php')); ?>" class="button">
+                    <a href="<?php echo admin_url('admin.php?page=gvs-collecties'); ?>" class="button">
                         <?php _e('Annuleer', 'gordijnen-voorraad'); ?>
                     </a>
                 </p>
@@ -281,7 +285,7 @@ class GVS_Collectie_Page {
         <div class="wrap">
             <h1>
                 <?php echo sprintf(__('Kleuren voor %s', 'gordijnen-voorraad'), esc_html($collectie->get_naam())); ?>
-                <a href="<?php echo add_query_arg('page', 'gvs-collecties', admin_url('admin.php')); ?>" class="page-title-action">
+                <a href="<?php echo admin_url('admin.php?page=gvs-collecties'); ?>" class="page-title-action">
                     <?php _e('Terug naar Collecties', 'gordijnen-voorraad'); ?>
                 </a>
             </h1>
@@ -330,7 +334,7 @@ class GVS_Collectie_Page {
                             <?php echo $edit_kleur ? __('Bijwerken', 'gordijnen-voorraad') : __('Toevoegen', 'gordijnen-voorraad'); ?>
                         </button>
                         <?php if ($edit_kleur): ?>
-                            <a href="<?php echo add_query_arg(['page' => 'gvs-collecties', 'action' => 'kleuren', 'id' => $collectie_id], admin_url('admin.php')); ?>" 
+                            <a href="<?php echo admin_url('admin.php?page=gvs-collecties&action=kleuren&id=' . $collectie_id); ?>" 
                                class="button"><?php _e('Annuleer', 'gordijnen-voorraad'); ?></a>
                         <?php endif; ?>
                     </p>
@@ -375,13 +379,19 @@ class GVS_Collectie_Page {
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <a href="<?php echo add_query_arg(['edit_kleur' => $kleur->id]); ?>" class="button button-small">
+                                    <a href="<?php echo admin_url('admin.php?page=gvs-collecties&action=kleuren&id=' . $collectie_id . '&edit_kleur=' . $kleur->id); ?>" class="button button-small">
                                         <?php _e('Bewerk', 'gordijnen-voorraad'); ?>
                                     </a>
                                     <?php if ($kleur->huidige_rollen == 0): ?>
-                                        <a href="<?php echo wp_nonce_url(add_query_arg(['action' => 'delete_kleur', 'kleur_id' => $kleur->id]), 'gvs_collectie_action'); ?>" 
-                                           class="button button-small gvs-delete-btn"
-                                           onclick="return confirm('<?php esc_attr_e('Weet u zeker dat u deze kleur wilt verwijderen?', 'gordijnen-voorraad'); ?>')">
+                                        <?php
+                                        $delete_url = wp_nonce_url(
+                                            admin_url('admin.php?page=gvs-collecties&action=delete_kleur&kleur_id=' . $kleur->id . '&collectie_id=' . $collectie_id),
+                                            'delete_kleur_' . $kleur->id
+                                        );
+                                        ?>
+                                        <a href="<?php echo $delete_url; ?>" 
+                                           class="button button-small"
+                                           onclick="return confirm('<?php esc_attr_e('Weet u zeker dat u deze kleur wilt verwijderen?', 'gordijnen-voorraad'); ?>');">
                                             <?php _e('Verwijder', 'gordijnen-voorraad'); ?>
                                         </a>
                                     <?php endif; ?>
@@ -408,12 +418,14 @@ class GVS_Collectie_Page {
             'deleted' => __('Collectie verwijderd', 'gordijnen-voorraad'),
             'kleur_saved' => __('Kleur opgeslagen', 'gordijnen-voorraad'),
             'kleur_deleted' => __('Kleur verwijderd', 'gordijnen-voorraad'),
+            'error' => __('Er is een fout opgetreden', 'gordijnen-voorraad'),
         ];
         
         $message = isset($messages[$_GET['message']]) ? $messages[$_GET['message']] : '';
         
         if ($message) {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($message) . '</p></div>';
+            $type = $_GET['message'] === 'error' ? 'error' : 'success';
+            echo '<div class="notice notice-' . $type . ' is-dismissible"><p>' . esc_html($message) . '</p></div>';
         }
     }
 }

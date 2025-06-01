@@ -131,15 +131,15 @@ class GVS_Locatie {
         global $wpdb;
         $table = GVS_Database::get_table_name('locaties');
         
-        // Check if location has rollen
-        $count = $this->get_rollen_count();
-        if ($count > 0) {
-            return new WP_Error('has_rollen', 
-                sprintf(__('Locatie heeft %d rollen. Verplaats deze eerst.', 'gordijnen-voorraad'), $count)
-            );
+        // Direct delete zonder checks - de check gebeurt in de page class
+        $result = $wpdb->delete($table, ['id' => $this->id]);
+        
+        if ($result === false) {
+            error_log('GVS Delete Locatie Error: ' . $wpdb->last_error);
+            return false;
         }
         
-        return $wpdb->delete($table, ['id' => $this->id]) !== false;
+        return true;
     }
     
     /**
@@ -148,11 +148,13 @@ class GVS_Locatie {
     public function get_rollen_count() {
         global $wpdb;
         
-        return $wpdb->get_var($wpdb->prepare("
+        $count = $wpdb->get_var($wpdb->prepare("
             SELECT COUNT(*) 
             FROM {$wpdb->prefix}gvs_rollen 
             WHERE locatie = %s
         ", $this->naam));
+        
+        return intval($count);
     }
     
     /**

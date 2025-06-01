@@ -1,0 +1,24 @@
+{
+  "name": "Kaya Scanner",
+  "short_name": "Kaya Scan",
+  "description": "Gordijnen voorraad scanner voor Kaya",
+  "start_url": "/gvs-mobile/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "scope": "/gvs-mobile/",
+  "id": "/gvs-mobile/",
+  "icons": [
+    {
+      "src": "https://kayaexclusive.com/wp-content/uploads/2025/05/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "prefer_related_applications": false,
+  "categories": ["business", "productivity"],
+  "lang": "nl-NL",
+  "dir": "ltr"
+}

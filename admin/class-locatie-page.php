@@ -10,12 +10,11 @@ class GVS_Locatie_Page {
      * Render page
      */
     public function render_page() {
-        // Check if we need to delete
-        if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id']) && isset($_GET['_wpnonce'])) {
-            if (wp_verify_nonce($_GET['_wpnonce'], 'delete_locatie_' . $_GET['id'])) {
-                $this->delete_locatie();
-                return;
-            }
+        // Check for delete action in GET (zoals WordPress standaard doet)
+        if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
+            check_admin_referer('delete_locatie_' . $_GET['id']);
+            $this->delete_locatie($_GET['id']);
+            return;
         }
         
         // Handle form submissions
@@ -79,10 +78,7 @@ class GVS_Locatie_Page {
         $locatie->set_actief(isset($_POST['actief']) ? 1 : 0);
         
         if ($locatie->save()) {
-            wp_redirect(add_query_arg([
-                'page' => 'gvs-locaties',
-                'message' => 'saved'
-            ], admin_url('admin.php')));
+            wp_redirect(admin_url('admin.php?page=gvs-locaties&message=saved'));
             exit;
         }
     }
@@ -90,50 +86,32 @@ class GVS_Locatie_Page {
     /**
      * Delete locatie
      */
-    private function delete_locatie() {
-        $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+    private function delete_locatie($id) {
+        $id = intval($id);
         
         if (!$id) {
-            wp_redirect(add_query_arg([
-                'page' => 'gvs-locaties',
-                'message' => 'error'
-            ], admin_url('admin.php')));
+            wp_redirect(admin_url('admin.php?page=gvs-locaties&message=error'));
             exit;
         }
         
         $locatie = GVS_Locatie::get_by_id($id);
         if (!$locatie) {
-            wp_redirect(add_query_arg([
-                'page' => 'gvs-locaties',
-                'message' => 'not_found'
-            ], admin_url('admin.php')));
+            wp_redirect(admin_url('admin.php?page=gvs-locaties&message=not_found'));
             exit;
         }
         
         // Check if location has rollen
         $rollen_count = $locatie->get_rollen_count();
         if ($rollen_count > 0) {
-            wp_redirect(add_query_arg([
-                'page' => 'gvs-locaties',
-                'message' => 'has_rollen',
-                'count' => $rollen_count
-            ], admin_url('admin.php')));
+            wp_redirect(admin_url('admin.php?page=gvs-locaties&message=has_rollen&count=' . $rollen_count));
             exit;
         }
         
-        $result = $locatie->delete();
-        
-        if ($result === true) {
-            wp_redirect(add_query_arg([
-                'page' => 'gvs-locaties',
-                'message' => 'deleted'
-            ], admin_url('admin.php')));
+        if ($locatie->delete()) {
+            wp_redirect(admin_url('admin.php?page=gvs-locaties&message=deleted'));
             exit;
         } else {
-            wp_redirect(add_query_arg([
-                'page' => 'gvs-locaties',
-                'message' => 'delete_failed'
-            ], admin_url('admin.php')));
+            wp_redirect(admin_url('admin.php?page=gvs-locaties&message=delete_failed'));
             exit;
         }
     }
@@ -147,7 +125,7 @@ class GVS_Locatie_Page {
         <div class="wrap">
             <h1>
                 <?php _e('Locaties', 'gordijnen-voorraad'); ?>
-                <a href="<?php echo add_query_arg('action', 'new'); ?>" class="page-title-action">
+                <a href="<?php echo admin_url('admin.php?page=gvs-locaties&action=new'); ?>" class="page-title-action">
                     <?php _e('Nieuwe Locatie', 'gordijnen-voorraad'); ?>
                 </a>
             </h1>
@@ -187,21 +165,17 @@ class GVS_Locatie_Page {
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <a href="<?php echo add_query_arg(['action' => 'edit', 'id' => $locatie->id]); ?>" class="button button-small">
+                                    <a href="<?php echo admin_url('admin.php?page=gvs-locaties&action=edit&id=' . $locatie->id); ?>" class="button button-small">
                                         <?php _e('Bewerk', 'gordijnen-voorraad'); ?>
                                     </a>
                                     <?php if ($locatie->aantal_rollen == 0): ?>
                                         <?php
                                         $delete_url = wp_nonce_url(
-                                            add_query_arg([
-                                                'page' => 'gvs-locaties',
-                                                'action' => 'delete',
-                                                'id' => $locatie->id
-                                            ], admin_url('admin.php')),
+                                            admin_url('admin.php?page=gvs-locaties&action=delete&id=' . $locatie->id),
                                             'delete_locatie_' . $locatie->id
                                         );
                                         ?>
-                                        <a href="<?php echo esc_url($delete_url); ?>" 
+                                        <a href="<?php echo $delete_url; ?>" 
                                            class="button button-small"
                                            onclick="return confirm('Weet u zeker dat u locatie <?php echo esc_js($locatie->naam); ?> wilt verwijderen?');">
                                             <?php _e('Verwijder', 'gordijnen-voorraad'); ?>
@@ -222,19 +196,6 @@ class GVS_Locatie_Page {
                 </div>
             </div>
         </div>
-        
-        <script>
-        // Test if JavaScript is working
-        console.log('Locatie page JavaScript loaded');
-        
-        // Add event listener to monitor clicks
-        document.addEventListener('click', function(e) {
-            if (e.target.tagName === 'A' && e.target.textContent.includes('Verwijder')) {
-                console.log('Delete link clicked:', e.target.href);
-                // Don't prevent default - let the browser handle it
-            }
-        });
-        </script>
         <?php
     }
     
@@ -312,7 +273,7 @@ class GVS_Locatie_Page {
                 
                 <p class="submit">
                     <button type="submit" class="button button-primary"><?php _e('Opslaan', 'gordijnen-voorraad'); ?></button>
-                    <a href="<?php echo add_query_arg('page', 'gvs-locaties', admin_url('admin.php')); ?>" class="button">
+                    <a href="<?php echo admin_url('admin.php?page=gvs-locaties'); ?>" class="button">
                         <?php _e('Annuleer', 'gordijnen-voorraad'); ?>
                     </a>
                 </p>

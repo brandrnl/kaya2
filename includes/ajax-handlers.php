@@ -4,7 +4,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Add AJAX actions
+// Add AJAX actions for logged in users
 add_action('wp_ajax_gvs_get_kleuren_by_collectie', 'gvs_ajax_get_kleuren_by_collectie');
 add_action('wp_ajax_gvs_add_rollen', 'gvs_ajax_add_rollen');
 add_action('wp_ajax_gvs_delete_rol', 'gvs_ajax_delete_rol');
@@ -12,6 +12,10 @@ add_action('wp_ajax_gvs_scan_qr', 'gvs_ajax_scan_qr');
 add_action('wp_ajax_gvs_search_rollen', 'gvs_ajax_search_rollen');
 add_action('wp_ajax_gvs_get_dashboard_stats', 'gvs_ajax_get_dashboard_stats');
 add_action('wp_ajax_gvs_print_qr_codes', 'gvs_ajax_print_qr_codes');
+
+// Add AJAX actions for non-logged in users (mobile scanner)
+add_action('wp_ajax_nopriv_gvs_scan_qr', 'gvs_ajax_scan_qr');
+add_action('wp_ajax_nopriv_gvs_delete_rol', 'gvs_ajax_delete_rol');
 
 /**
  * Get kleuren by collectie
@@ -101,17 +105,24 @@ function gvs_ajax_delete_rol() {
         wp_send_json_error(['message' => 'Rol niet gevonden']);
     }
     
-    // Add note to transaction if provided
-    if ($notitie) {
-        global $wpdb;
-        $wpdb->update(
-            GVS_Database::get_table_name('transacties'),
-            ['notitie' => $notitie],
-            ['rol_id' => $rol_id, 'type' => 'uitgaand']
-        );
-    }
+    // Store QR code before deletion
+    $qr_code = $rol->get_qr_code();
     
+    // Delete the rol
     if ($rol->delete()) {
+        // Add note to transaction if provided
+        if ($notitie) {
+            global $wpdb;
+            $wpdb->update(
+                GVS_Database::get_table_name('transacties'),
+                ['notitie' => $notitie],
+                [
+                    'qr_code' => $qr_code,
+                    'type' => 'uitgaand'
+                ]
+            );
+        }
+        
         wp_send_json_success(['message' => 'Rol uitgegeven']);
     } else {
         wp_send_json_error(['message' => 'Fout bij uitgeven rol']);

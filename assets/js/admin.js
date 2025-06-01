@@ -1,18 +1,12 @@
 jQuery(document).ready(function($) {
     'use strict';
     
+    console.log('GVS Admin JS loaded');
+    
     // Global functions
     window.gvsConfirmDelete = function(message) {
         return confirm(message || gvs_ajax.strings.confirm_delete);
     };
-    
-    // Handle delete buttons - maar alleen voor specifieke classes, niet algemeen
-    $(document).on('click', '.gvs-delete-btn-disabled', function(e) {
-        if (!gvsConfirmDelete()) {
-            e.preventDefault();
-            return false;
-        }
-    });
     
     // Handle AJAX forms
     $(document).on('submit', '.gvs-ajax-form', function(e) {

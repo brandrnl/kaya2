@@ -2,7 +2,7 @@
 <html <?php language_attributes(); ?>>
 <head>
     <meta charset="<?php bloginfo('charset'); ?>">
-    <title><?php _e('Gordijnen Voorraad Scanner', 'gordijnen-voorraad'); ?></title>
+    <title><?php _e('Kaya Scanner', 'gordijnen-voorraad'); ?></title>
     <?php wp_head(); ?>
     <style>
         * {
@@ -13,58 +13,152 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: #f0f2f5;
-            color: #333;
+            background: #000;
+            color: #fff;
             overflow-x: hidden;
+            min-height: 100vh;
         }
         
+        /* Splash Screen */
+        .gvs-splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        .gvs-splash-screen.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .gvs-splash-logo {
+            width: 200px;
+            height: auto;
+            animation: fadeInScale 1s ease-out;
+        }
+        
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        /* Main App */
         .gvs-mobile-header {
-            background: #2271b1;
-            color: white;
+            background: #000;
+            color: #fff;
             padding: 15px;
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-bottom: 1px solid #333;
         }
         
         .gvs-mobile-header h1 {
-            font-size: 20px;
-            font-weight: 500;
+            font-size: 18px;
+            font-weight: 300;
             margin: 0;
+            text-align: center;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
         
         .gvs-mobile-container {
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
+            min-height: calc(100vh - 60px);
         }
-        
+        /* Verberg originele Engelse tekst en voeg Nederlandse tekst toe */
+#html5-qrcode-button-camera-permission {
+    font-size: 0 !important;
+}
+
+#html5-qrcode-button-camera-permission:after {
+    content: 'Camera Toestemming Vragen';
+    font-size: 16px;
+}
+
+#html5-qrcode-button-camera-start {
+    font-size: 0 !important;
+}
+
+#html5-qrcode-button-camera-start:after {
+    content: 'Start Scannen';
+    font-size: 16px;
+}
+
+#html5-qrcode-button-camera-stop {
+    font-size: 0 !important;
+}
+
+#html5-qrcode-button-camera-stop:after {
+    content: 'Stop Scannen';
+    font-size: 16px;
+}
         .gvs-scanner-section {
-            background: white;
-            border-radius: 12px;
+            background: #fff;
+            border-radius: 0;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            color: #000;
         }
         
         #qr-reader {
             width: 100%;
             max-width: 500px;
             margin: 0 auto;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
         }
         
         #qr-reader video {
             border-radius: 8px;
         }
         
+        /* Verberg camera selector */
+        #qr-reader__camera_selection {
+            display: none !important;
+        }
+        
+        #qr-reader__dashboard_section_csr button {
+            background: #000 !important;
+            color: #fff !important;
+            border: none !important;
+            padding: 12px 24px !important;
+            border-radius: 0 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            font-weight: 300 !important;
+            width: 100% !important;
+            margin: 10px 0 !important;
+        }
+        
+        #qr-reader__dashboard_section_csr button:hover {
+            background: #333 !important;
+        }
+        
         .gvs-scan-result {
-            background: white;
-            border-radius: 12px;
+            background: #fff;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            color: #000;
             display: none;
+            border: 1px solid #000;
         }
         
         .gvs-scan-result.show {
@@ -86,14 +180,15 @@
         .gvs-result-header {
             display: flex;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #000;
         }
         
         .gvs-result-icon {
-            width: 50px;
-            height: 50px;
-            background: #4ade80;
-            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            background: #000;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -101,29 +196,31 @@
         }
         
         .gvs-result-icon svg {
-            width: 30px;
-            height: 30px;
+            width: 24px;
+            height: 24px;
             fill: white;
         }
         
         .gvs-result-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
+            font-size: 16px;
+            font-weight: 300;
+            color: #000;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .gvs-result-details {
-            background: #f8f9fa;
-            border-radius: 8px;
+            background: #f8f8f8;
             padding: 15px;
             margin-bottom: 20px;
+            border: 1px solid #000;
         }
         
         .gvs-detail-row {
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #e5e7eb;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
         }
         
         .gvs-detail-row:last-child {
@@ -131,13 +228,16 @@
         }
         
         .gvs-detail-label {
-            font-weight: 500;
+            font-weight: 300;
             color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 12px;
         }
         
         .gvs-detail-value {
-            font-weight: 600;
-            color: #333;
+            font-weight: 500;
+            color: #000;
         }
         
         .gvs-actions {
@@ -147,34 +247,35 @@
         
         .gvs-btn {
             flex: 1;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 500;
+            padding: 15px 24px;
+            border: 1px solid #000;
+            font-size: 14px;
+            font-weight: 300;
             cursor: pointer;
             transition: all 0.2s;
             text-align: center;
             text-decoration: none;
             display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .gvs-btn-primary {
-            background: #dc2626;
-            color: white;
+            background: #000;
+            color: #fff;
         }
         
         .gvs-btn-primary:hover {
-            background: #b91c1c;
+            background: #333;
         }
         
         .gvs-btn-secondary {
-            background: #e5e7eb;
-            color: #333;
+            background: #fff;
+            color: #000;
         }
         
         .gvs-btn-secondary:hover {
-            background: #d1d5db;
+            background: #f0f0f0;
         }
         
         .gvs-scanner-controls {
@@ -185,32 +286,35 @@
         
         .gvs-message {
             padding: 15px;
-            border-radius: 8px;
             margin-bottom: 20px;
-            font-weight: 500;
+            font-weight: 300;
+            border: 1px solid;
         }
         
         .gvs-message.success {
-            background: #d1fae5;
-            color: #065f46;
+            background: #fff;
+            color: #000;
+            border-color: #000;
         }
         
         .gvs-message.error {
-            background: #fee2e2;
-            color: #991b1b;
+            background: #000;
+            color: #fff;
+            border-color: #000;
         }
         
         .gvs-message.info {
-            background: #dbeafe;
-            color: #1e40af;
+            background: #f8f8f8;
+            color: #000;
+            border-color: #000;
         }
         
         .gvs-loader {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #2271b1;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #fff;
+            border-top: 2px solid transparent;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-right: 10px;
@@ -223,10 +327,43 @@
         }
         
         .gvs-user-info {
-            text-align: right;
-            font-size: 14px;
-            color: rgba(255,255,255,0.8);
-            margin-top: 5px;
+            text-align: center;
+            font-size: 12px;
+            color: #fff;
+            margin-top: 10px;
+            font-weight: 300;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Override Html5QrcodeScanner styles */
+        #qr-reader__dashboard {
+            background: transparent !important;
+        }
+        
+        #qr-reader__dashboard_section_csr {
+            text-align: center !important;
+        }
+        
+        #qr-reader__dashboard_section_fsr {
+            display: none !important;
+        }
+        
+        #qr-reader__dashboard_section_swaplink {
+            display: none !important;
+        }
+        
+        #qr-reader__scan_region {
+            background: transparent !important;
+        }
+        
+        #qr-reader__camera_permission_button {
+            background: #000 !important;
+            color: #fff !important;
+            border: none !important;
+            padding: 15px 30px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            font-weight: 300 !important;
         }
         
         @media (max-width: 480px) {
@@ -239,28 +376,25 @@
             }
             
             .gvs-btn {
-                font-size: 14px;
-                padding: 10px 20px;
+                font-size: 12px;
+                padding: 12px 20px;
             }
-        }
-        
-        /* QR Scanner specific styles */
-        #qr-reader__scan_region {
-            background: transparent !important;
-        }
-        
-        #qr-reader__dashboard_section_swaplink {
-            display: none !important;
         }
     </style>
 </head>
 <body>
+    <!-- Splash Screen -->
+    <div class="gvs-splash-screen" id="splashScreen">
+        <img src="https://kayaexclusive.com/wp-content/uploads/2025/05/logo-wit.svg" alt="Kaya" class="gvs-splash-logo">
+    </div>
+    
+    <!-- Main App -->
     <div class="gvs-mobile-header">
-        <h1><?php _e('Gordijnen Voorraad Scanner', 'gordijnen-voorraad'); ?></h1>
+        <h1><?php _e('Kaya Scanner', 'gordijnen-voorraad'); ?></h1>
         <div class="gvs-user-info">
             <?php 
             $current_user = wp_get_current_user();
-            echo sprintf(__('Ingelogd als: %s', 'gordijnen-voorraad'), esc_html($current_user->display_name));
+            echo esc_html($current_user->display_name);
             ?>
         </div>
     </div>
@@ -293,27 +427,27 @@
             
             <div class="gvs-result-details">
                 <div class="gvs-detail-row">
-                    <span class="gvs-detail-label"><?php _e('QR Code:', 'gordijnen-voorraad'); ?></span>
+                    <span class="gvs-detail-label"><?php _e('QR Code', 'gordijnen-voorraad'); ?></span>
                     <span class="gvs-detail-value" id="result-qr"></span>
                 </div>
                 <div class="gvs-detail-row">
-                    <span class="gvs-detail-label"><?php _e('Collectie:', 'gordijnen-voorraad'); ?></span>
+                    <span class="gvs-detail-label"><?php _e('Collectie', 'gordijnen-voorraad'); ?></span>
                     <span class="gvs-detail-value" id="result-collectie"></span>
                 </div>
                 <div class="gvs-detail-row">
-                    <span class="gvs-detail-label"><?php _e('Kleur:', 'gordijnen-voorraad'); ?></span>
+                    <span class="gvs-detail-label"><?php _e('Kleur', 'gordijnen-voorraad'); ?></span>
                     <span class="gvs-detail-value" id="result-kleur"></span>
                 </div>
                 <div class="gvs-detail-row">
-                    <span class="gvs-detail-label"><?php _e('Meters:', 'gordijnen-voorraad'); ?></span>
+                    <span class="gvs-detail-label"><?php _e('Meters', 'gordijnen-voorraad'); ?></span>
                     <span class="gvs-detail-value" id="result-meters"></span>
                 </div>
                 <div class="gvs-detail-row">
-                    <span class="gvs-detail-label"><?php _e('Locatie:', 'gordijnen-voorraad'); ?></span>
+                    <span class="gvs-detail-label"><?php _e('Locatie', 'gordijnen-voorraad'); ?></span>
                     <span class="gvs-detail-value" id="result-locatie"></span>
                 </div>
                 <div class="gvs-detail-row">
-                    <span class="gvs-detail-label"><?php _e('Datum:', 'gordijnen-voorraad'); ?></span>
+                    <span class="gvs-detail-label"><?php _e('Datum', 'gordijnen-voorraad'); ?></span>
                     <span class="gvs-detail-value" id="result-datum"></span>
                 </div>
             </div>
@@ -328,6 +462,13 @@
             </div>
         </div>
     </div>
+    
+    <script>
+    // Hide splash screen after 3 seconds
+    setTimeout(function() {
+        document.getElementById('splashScreen').classList.add('fade-out');
+    }, 3000);
+    </script>
     
     <?php wp_footer(); ?>
 </body>
