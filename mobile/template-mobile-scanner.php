@@ -321,6 +321,11 @@
             vertical-align: middle;
         }
         
+        .gvs-message .gvs-loader {
+            border: 2px solid #000;
+            border-top: 2px solid transparent;
+        }
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -393,8 +398,12 @@
         <h1><?php _e('Kaya Scanner', 'gordijnen-voorraad'); ?></h1>
         <div class="gvs-user-info">
             <?php 
-            $current_user = wp_get_current_user();
-            echo esc_html($current_user->display_name);
+            if (is_user_logged_in()) {
+                $current_user = wp_get_current_user();
+                echo esc_html($current_user->display_name);
+            } else {
+                echo 'Niet ingelogd';
+            }
             ?>
         </div>
     </div>
@@ -463,7 +472,34 @@
         </div>
     </div>
     
+    <!-- Debug Info (verborgen) -->
+    <div id="debug-info" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #000; color: #0f0; font-family: monospace; font-size: 10px; padding: 10px; max-height: 200px; overflow-y: auto;">
+        <div id="debug-log"></div>
+    </div>
+    
     <script>
+    // Debug helper
+    window.debugLog = function(msg) {
+        const log = document.getElementById('debug-log');
+        const time = new Date().toLocaleTimeString();
+        log.innerHTML = time + ': ' + msg + '<br>' + log.innerHTML;
+    };
+    
+    // Toon debug info door 5x snel te tikken op de header
+    let tapCount = 0;
+    let tapTimer;
+    document.querySelector('.gvs-mobile-header').addEventListener('click', function() {
+        tapCount++;
+        clearTimeout(tapTimer);
+        tapTimer = setTimeout(() => tapCount = 0, 500);
+        
+        if (tapCount >= 5) {
+            document.getElementById('debug-info').style.display = 
+                document.getElementById('debug-info').style.display === 'none' ? 'block' : 'none';
+            tapCount = 0;
+        }
+    });
+    
     // Hide splash screen after 3 seconds
     setTimeout(function() {
         document.getElementById('splashScreen').classList.add('fade-out');

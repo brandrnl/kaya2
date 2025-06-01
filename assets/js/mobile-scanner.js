@@ -1,243 +1,246 @@
 jQuery(document).ready(function($) {
     'use strict';
     
-    let html5QrcodeScanner = null;
-    let lastScannedCode = null;
+    // Debug logging
+    function log(msg) {
+        console.log('[GVS Scanner] ' + msg);
+        if (window.debugLog) window.debugLog(msg);
+    }
+    
+    // Globale variabelen
+    let scanner = null;
+    let isScanning = false;
     let currentRolId = null;
     
-    // Success scan sound
-    function playSuccessSound() {
-        // Create audio context for beep sound
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        
-        // Create oscillator for beep
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        // Configure the beep sound
-        oscillator.frequency.value = 1000; // High pitch beep
-        oscillator.type = 'sine';
-        
-        // Fade in and out for smooth sound
-        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-        gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
-        gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.1);
-        
-        // Play the beep
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.1);
-        
-        // Second beep after 150ms
-        setTimeout(() => {
-            const oscillator2 = audioContext.createOscillator();
-            const gainNode2 = audioContext.createGain();
-            
-            oscillator2.connect(gainNode2);
-            gainNode2.connect(audioContext.destination);
-            
-            oscillator2.frequency.value = 1500; // Higher pitch for second beep
-            oscillator2.type = 'sine';
-            
-            gainNode2.gain.setValueAtTime(0, audioContext.currentTime);
-            gainNode2.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.01);
-            gainNode2.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.1);
-            
-            oscillator2.start(audioContext.currentTime);
-            oscillator2.stop(audioContext.currentTime + 0.1);
-        }, 150);
-    }
-    
-    // Wait for splash screen to disappear
-    setTimeout(function() {
-        console.log('Mobile scanner ready');
-    }, 3500);
-    
-    // Initialize scanner with back camera only
-    function initScanner() {
-        const config = {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            rememberLastUsedCamera: true,
-            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-            // Force gebruik van achtercamera
-            aspectRatio: 1.0,
-            showTorchButtonIfSupported: true,
-            defaultZoomValueIfSupported: 1.5
-        };
-        
-        html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", config);
-    }
-    
-    // Start scanning
-    function startScanning() {
-        // Check if first time (camera permission not yet granted)
-        if (!localStorage.getItem('gvs_camera_permission_shown')) {
-            showMessage(
-                '<strong>Camera toegang vereist</strong><br>' +
-                'Om QR codes te scannen heeft deze app toegang tot uw camera nodig. ' +
-                'Klik op "Toestaan" wanneer uw browser om toestemming vraagt.',
-                'info'
-            );
-            localStorage.setItem('gvs_camera_permission_shown', 'true');
-        }
-        
-        if (html5QrcodeScanner) {
-            // Custom success and error handlers
-            const onScanSuccess = function(decodedText, decodedResult) {
-                onScanSuccessHandler(decodedText, decodedResult);
-            };
-            
-            const onScanError = function(errorMessage) {
-                // Check for specific permission errors
-                if (errorMessage.includes('NotAllowedError')) {
-                    showMessage('Camera toegang geweigerd. Controleer uw browser instellingen.', 'error');
-                    stopScanning();
-                } else if (errorMessage.includes('NotFoundError')) {
-                    showMessage('Geen camera gevonden op dit apparaat.', 'error');
-                    stopScanning();
-                }
-                // Ignore other errors - they happen frequently during scanning
-            };
-            
-            // Override render to use back camera
-            html5QrcodeScanner.render(onScanSuccess, onScanError);
-            
-            // Force select back camera after render
-            setTimeout(function() {
-                Html5Qrcode.getCameras().then(devices => {
-                    if (devices && devices.length > 0) {
-                        // Find back camera
-                        let backCameraId = null;
-                        
-                        devices.forEach(device => {
-                            if (device.label.toLowerCase().includes('back') || 
-                                device.label.toLowerCase().includes('rear') ||
-                                device.label.toLowerCase().includes('environment')) {
-                                backCameraId = device.id;
-                            }
-                        });
-                        
-                        // If no back camera found, use last camera (usually back on mobile)
-                        if (!backCameraId && devices.length > 1) {
-                            backCameraId = devices[devices.length - 1].id;
-                        }
-                        
-                        // If we found a back camera, restart with it
-                        if (backCameraId) {
-                            html5QrcodeScanner.clear();
-                            
-                            const html5Qrcode = new Html5Qrcode("qr-reader");
-                            html5Qrcode.start(
-                                backCameraId,
-                                {
-                                    fps: 10,
-                                    qrbox: { width: 250, height: 250 }
-                                },
-                                onScanSuccess,
-                                onScanError
-                            ).then(() => {
-                                $('#start-scan').hide();
-                                $('#stop-scan').show();
-                                showMessage(gvs_mobile.strings.scanning, 'info');
-                                
-                                // Store instance for stopping later
-                                window.html5QrcodeInstance = html5Qrcode;
-                            }).catch(err => {
-                                console.error('Failed to start with back camera:', err);
-                                showMessage('Kan camera niet starten. Probeer opnieuw.', 'error');
-                            });
-                        }
-                    }
-                }).catch(err => {
-                    console.error('Unable to get cameras:', err);
-                    showMessage('Kan geen camera\'s vinden op dit apparaat.', 'error');
-                });
-            }, 500);
-            
-            $('#start-scan').hide();
-            $('#stop-scan').show();
-            showMessage(gvs_mobile.strings.scanning, 'info');
-        }
-    }
-    
-    // Stop scanning
-    function stopScanning() {
-        if (window.html5QrcodeInstance) {
-            window.html5QrcodeInstance.stop().then(() => {
-                window.html5QrcodeInstance.clear();
-                window.html5QrcodeInstance = null;
-            }).catch(err => {
-                console.error('Error stopping scanner:', err);
-            });
-        } else if (html5QrcodeScanner) {
-            html5QrcodeScanner.clear();
-        }
-        
-        $('#start-scan').show();
-        $('#stop-scan').hide();
-        clearMessages();
-    }
-    
-    // On successful scan
-    function onScanSuccessHandler(decodedText, decodedResult) {
-        // Prevent duplicate scans
-        if (decodedText === lastScannedCode) {
-            return;
-        }
-        
-        lastScannedCode = decodedText;
-        
-        // Vibrate if available
-        if (navigator.vibrate) {
-            navigator.vibrate(200);
-        }
-        
-        // Play success sound
+    // Sound effect - Authentiek barcode scanner geluid
+    function playBeep() {
         try {
-            playSuccessSound();
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const currentTime = audioContext.currentTime;
+            
+            // Creëer de klassieke "BEEP" van een barcode scanner
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            // Bandpass filter voor het typische scanner geluid
+            const filter = audioContext.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 1800;
+            filter.Q.value = 15;
+            
+            // Verbindingen
+            oscillator.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Gebruik sawtooth voor rijker geluid met harmonischen
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(1800, currentTime);
+            
+            // Snelle attack, steady volume, snelle release - precies zoals echte scanners
+            gainNode.gain.setValueAtTime(0, currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.6, currentTime + 0.005); // 5ms attack
+            gainNode.gain.setValueAtTime(0.6, currentTime + 0.070); // Hold voor 65ms
+            gainNode.gain.linearRampToValueAtTime(0, currentTime + 0.080); // 10ms release
+            
+            // Start en stop - totaal 80ms (typische scanner beep duur)
+            oscillator.start(currentTime);
+            oscillator.stop(currentTime + 0.08);
+            
+            log('Scanner beep played!');
         } catch (e) {
-            console.log('Could not play sound:', e);
+            log('Audio error: ' + e);
         }
+    }
+    
+    // Success sound - Bevestigingsgeluid voor uitgeven
+    function playSuccessSound() {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const currentTime = audioContext.currentTime;
+            
+            // Twee tonen voor een positief "ding-dong" geluid
+            
+            // Eerste toon
+            const osc1 = audioContext.createOscillator();
+            const gain1 = audioContext.createGain();
+            osc1.connect(gain1);
+            gain1.connect(audioContext.destination);
+            
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(523.25, currentTime); // C5
+            gain1.gain.setValueAtTime(0, currentTime);
+            gain1.gain.linearRampToValueAtTime(0.4, currentTime + 0.01);
+            gain1.gain.linearRampToValueAtTime(0.4, currentTime + 0.09);
+            gain1.gain.linearRampToValueAtTime(0, currentTime + 0.1);
+            
+            // Tweede toon (hoger)
+            const osc2 = audioContext.createOscillator();
+            const gain2 = audioContext.createGain();
+            osc2.connect(gain2);
+            gain2.connect(audioContext.destination);
+            
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(659.25, currentTime + 0.1); // E5
+            gain2.gain.setValueAtTime(0, currentTime + 0.1);
+            gain2.gain.linearRampToValueAtTime(0.4, currentTime + 0.11);
+            gain2.gain.linearRampToValueAtTime(0.4, currentTime + 0.24);
+            gain2.gain.linearRampToValueAtTime(0, currentTime + 0.25);
+            
+            // Start oscillators
+            osc1.start(currentTime);
+            osc1.stop(currentTime + 0.1);
+            osc2.start(currentTime + 0.1);
+            osc2.stop(currentTime + 0.25);
+            
+            log('Success sound played!');
+        } catch (e) {
+            log('Audio error: ' + e);
+        }
+    }
+    
+    // Initialiseer scanner
+    function initScanner() {
+        log('Initializing scanner...');
         
-        // Stop scanner
-        stopScanning();
+        // Stop eventuele bestaande scanner
+        if (scanner && scanner.isScanning) {
+            scanner.stop().then(() => {
+                scanner = null;
+                createNewScanner();
+            }).catch(() => {
+                scanner = null;
+                createNewScanner();
+            });
+        } else {
+            createNewScanner();
+        }
+    }
+    
+    // Maak nieuwe scanner
+    function createNewScanner() {
+        log('Creating new scanner instance...');
         
-        // Show loading
-        showMessage('<span class="gvs-loader"></span>' + gvs_mobile.strings.scan_success, 'success');
+        // Leeg de container
+        $('#qr-reader').empty();
         
-        // Lookup QR code
+        // Maak nieuwe Html5Qrcode instance
+        scanner = new Html5Qrcode("qr-reader");
+        
+        // Start de scanner
+        Html5Qrcode.getCameras().then(devices => {
+            if (devices && devices.length) {
+                let cameraId = devices[devices.length - 1].id; // Laatste camera (meestal achtercamera)
+                
+                // Zoek specifiek naar achtercamera
+                devices.forEach(device => {
+                    if (device.label.toLowerCase().includes('back') || 
+                        device.label.toLowerCase().includes('rear') ||
+                        device.label.toLowerCase().includes('environment')) {
+                        cameraId = device.id;
+                    }
+                });
+                
+                log('Starting camera: ' + cameraId);
+                
+                scanner.start(
+                    cameraId,
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 }
+                    },
+                    onScanSuccess,
+                    onScanFailure
+                ).then(() => {
+                    log('Scanner started successfully');
+                    isScanning = true;
+                    $('#start-scan').hide();
+                    $('#stop-scan').show();
+                    showMessage('Scanner actief...', 'info');
+                }).catch(err => {
+                    log('Failed to start scanner: ' + err);
+                    showMessage('Kan camera niet starten', 'error');
+                });
+            } else {
+                log('No cameras found');
+                showMessage('Geen camera gevonden', 'error');
+            }
+        }).catch(err => {
+            log('Camera error: ' + err);
+            showMessage('Camera fout', 'error');
+        });
+    }
+    
+    // Scan success
+    function onScanSuccess(decodedText, decodedResult) {
+        log('Scan success: ' + decodedText);
+        
+        if (!isScanning) return;
+        
+        // Stop scanning
+        isScanning = false;
+        
+        // DIRECT feedback - geluid en vibratie
+        playBeep();
+        if (navigator.vibrate) navigator.vibrate(200);
+        
+        // Stop de scanner
+        scanner.stop().then(() => {
+            log('Scanner stopped after scan');
+            $('#qr-reader').empty();
+            $('#start-scan').show();
+            $('#stop-scan').hide();
+        }).catch(err => {
+            log('Error stopping scanner: ' + err);
+        });
+        
+        // Verwerk QR code
+        processQRCode(decodedText);
+    }
+    
+    // Scan failure (wordt constant aangeroepen, negeer)
+    function onScanFailure(error) {
+        // Negeer
+    }
+    
+    // Verwerk QR code
+    function processQRCode(qrCode) {
+        log('Processing QR: ' + qrCode);
+        showMessage('<span class="gvs-loader"></span>QR code verwerken...', 'info');
+        
         $.ajax({
             url: gvs_mobile.ajax_url,
             type: 'POST',
             data: {
                 action: 'gvs_scan_qr',
-                qr_code: decodedText,
+                qr_code: qrCode,
                 nonce: gvs_mobile.nonce
             },
             success: function(response) {
+                log('Scan response: ' + JSON.stringify(response));
                 if (response.success) {
                     displayRolInfo(response.data.rol);
                 } else {
-                    showMessage(response.data.message || gvs_mobile.strings.not_found, 'error');
-                    setTimeout(function() {
-                        $('#new-scan-btn').click();
+                    showMessage(response.data.message || 'Rol niet gevonden', 'error');
+                    setTimeout(() => {
+                        initScanner();
                     }, 2000);
                 }
             },
-            error: function() {
-                showMessage(gvs_mobile.strings.error, 'error');
-                setTimeout(function() {
-                    $('#new-scan-btn').click();
+            error: function(xhr, status, error) {
+                log('Scan error: ' + status + ' - ' + error);
+                showMessage('Verbindingsfout', 'error');
+                setTimeout(() => {
+                    initScanner();
                 }, 2000);
             }
         });
     }
     
-    // Display rol information
+    // Toon rol info
     function displayRolInfo(rol) {
+        log('Display rol: ' + JSON.stringify(rol));
+        
         currentRolId = rol.id;
         
         $('#result-qr').text(rol.qr_code);
@@ -251,51 +254,72 @@ jQuery(document).ready(function($) {
         clearMessages();
     }
     
-    // Show message
+    // Toon bericht
     function showMessage(message, type) {
-        const html = '<div class="gvs-message ' + type + '">' + message + '</div>';
-        $('#gvs-messages').html(html);
+        $('#gvs-messages').html('<div class="gvs-message ' + type + '">' + message + '</div>');
     }
     
-    // Clear messages
+    // Wis berichten
     function clearMessages() {
         $('#gvs-messages').empty();
     }
     
-    // Handle start scan button
+    // Event handlers
+    
+    // Start scan
     $('#start-scan').on('click', function() {
-        startScanning();
+        log('Start button clicked');
+        initScanner();
     });
     
-    // Handle stop scan button
+    // Stop scan
     $('#stop-scan').on('click', function() {
-        stopScanning();
+        log('Stop button clicked');
+        if (scanner && isScanning) {
+            isScanning = false;
+            scanner.stop().then(() => {
+                log('Scanner stopped');
+                $('#qr-reader').empty();
+                $('#start-scan').show();
+                $('#stop-scan').hide();
+                clearMessages();
+            }).catch(err => {
+                log('Error stopping: ' + err);
+            });
+        }
     });
     
-    // Handle new scan button
+    // Nieuwe scan
     $('#new-scan-btn').on('click', function() {
+        log('New scan clicked');
         $('#scan-result').removeClass('show');
         currentRolId = null;
-        lastScannedCode = null;
-        setTimeout(function() {
-            startScanning();
+        clearMessages();
+        
+        setTimeout(() => {
+            initScanner();
         }, 300);
     });
     
-    // Handle uitgeven button
+    // Uitgeven
     $('#uitgeven-btn').on('click', function() {
+        log('Uitgeven clicked - Rol ID: ' + currentRolId);
+        
         if (!currentRolId) {
+            log('No rol ID!');
             return;
         }
         
-        if (!confirm(gvs_mobile.strings.confirm_delete)) {
+        if (!confirm('Weet u zeker dat u deze rol wilt uitgeven?')) {
             return;
         }
         
         const $btn = $(this);
         const originalText = $btn.text();
         
-        $btn.prop('disabled', true).html('<span class="gvs-loader"></span> ' + gvs_mobile.strings.scanning);
+        $btn.prop('disabled', true).html('<span class="gvs-loader"></span>Bezig...');
+        
+        log('Sending delete request...');
         
         $.ajax({
             url: gvs_mobile.ajax_url,
@@ -306,86 +330,44 @@ jQuery(document).ready(function($) {
                 nonce: gvs_mobile.nonce
             },
             success: function(response) {
+                log('Delete response: ' + JSON.stringify(response));
+                
                 if (response.success) {
-                    showMessage(gvs_mobile.strings.deleted, 'success');
+                    showMessage('Rol uitgegeven!', 'success');
                     $('#scan-result').removeClass('show');
                     currentRolId = null;
-                    lastScannedCode = null;
                     
-                    // Vibrate success pattern
-                    if (navigator.vibrate) {
-                        navigator.vibrate([100, 50, 100]);
-                    }
+                    // Reset de knop direct
+                    $btn.prop('disabled', false).text(originalText);
                     
-                    // Play success sound for deletion
-                    try {
-                        playSuccessSound();
-                    } catch (e) {
-                        console.log('Could not play sound:', e);
-                    }
+                    // Feedback
+                    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                    playSuccessSound(); // Gebruik success geluid voor uitgeven
                     
-                    setTimeout(function() {
-                        startScanning();
+                    // Start nieuwe scan
+                    setTimeout(() => {
+                        initScanner();
                     }, 1500);
                 } else {
-                    showMessage(response.data.message || gvs_mobile.strings.error, 'error');
+                    showMessage(response.data.message || 'Fout bij uitgeven', 'error');
                     $btn.prop('disabled', false).text(originalText);
                 }
             },
-            error: function() {
-                showMessage(gvs_mobile.strings.error, 'error');
+            error: function(xhr, status, error) {
+                log('Delete error: ' + status + ' - ' + error);
+                log('Response: ' + xhr.responseText);
+                showMessage('Verbindingsfout', 'error');
+                $btn.prop('disabled', false).text(originalText);
+            },
+            complete: function() {
+                // Zorg ervoor dat de knop ALTIJD wordt gereset
                 $btn.prop('disabled', false).text(originalText);
             }
         });
     });
     
-    // Initialize on load
-    initScanner();
-    
-    // PWA installation
-    let deferredPrompt;
-    
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        
-        // Show install button if not already installed
-        if (!window.matchMedia('(display-mode: standalone)').matches) {
-            showInstallPrompt();
-        }
-    });
-    
-    function showInstallPrompt() {
-        const installBtn = $('<button class="gvs-btn gvs-btn-primary" style="margin-bottom: 20px; width: 100%;">Installeer als App</button>');
-        
-        installBtn.on('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                
-                if (outcome === 'accepted') {
-                    installBtn.remove();
-                }
-                
-                deferredPrompt = null;
-            }
-        });
-        
-        $('.gvs-scanner-section').before(installBtn);
-    }
-    
-    // Handle back button
-    window.addEventListener('popstate', function(e) {
-        if ($('#scan-result').hasClass('show')) {
-            e.preventDefault();
-            $('#new-scan-btn').click();
-        }
-    });
-    
-    // Prevent accidental navigation
-    $(window).on('beforeunload', function() {
-        if (html5QrcodeScanner && $('#stop-scan').is(':visible')) {
-            return 'Scanner is actief. Weet u zeker dat u wilt verlaten?';
-        }
-    });
+    // Log belangrijke info bij start
+    log('Mobile scanner loaded');
+    log('AJAX URL: ' + gvs_mobile.ajax_url);
+    log('User logged in: ' + gvs_mobile.is_logged_in);
 });

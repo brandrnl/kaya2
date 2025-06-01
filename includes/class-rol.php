@@ -202,17 +202,20 @@ class GVS_Rol {
             return false;
         }
         
-        // Generate code format: GVS_[COLLECTIE-3CHARS]_[KLEUR-3CHARS]_[RANDOM]
+        // Get prefix from settings (default to GVS if not set)
+        $prefix = get_option('gvs_qr_prefix', 'GVS');
+        
+        // Generate code format: PREFIX_[COLLECTIE-3CHARS]_[KLEUR-3CHARS]_[RANDOM]
         $collectie_code = strtoupper(substr(preg_replace('/[^A-Z0-9]/i', '', $collectie->get_naam()), 0, 3));
         $kleur_code = strtoupper(substr(preg_replace('/[^A-Z0-9]/i', '', $kleur->get_kleur_naam()), 0, 3));
         $random = rand(100, 999);
         
-        $this->qr_code = sprintf("GVS_%s_%s_%d", $collectie_code, $kleur_code, $random);
+        $this->qr_code = sprintf("%s_%s_%s_%d", $prefix, $collectie_code, $kleur_code, $random);
         
         // Check if exists and regenerate if needed
         while ($this->qr_code_exists($this->qr_code)) {
             $random = rand(100, 999);
-            $this->qr_code = sprintf("GVS_%s_%s_%d", $collectie_code, $kleur_code, $random);
+            $this->qr_code = sprintf("%s_%s_%s_%d", $prefix, $collectie_code, $kleur_code, $random);
         }
         
         return true;

@@ -63,6 +63,12 @@ function gvs_load_plugin() {
     new GVS_Mobile_Scanner();
 }
 
+// Add rewrite rules
+add_action('init', 'gvs_add_rewrite_rules');
+function gvs_add_rewrite_rules() {
+    add_rewrite_rule('^gvs-mobile/?$', 'index.php?gvs_mobile=1', 'top');
+}
+
 // Add query vars
 add_filter('query_vars', 'gvs_query_vars');
 function gvs_query_vars($vars) {
