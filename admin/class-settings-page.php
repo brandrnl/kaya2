@@ -10,6 +10,11 @@ class GVS_Settings_Page {
      * Render page
      */
     public function render_page() {
+        // Debug: Log what's being submitted
+        if (!empty($_POST)) {
+            error_log('GVS Settings POST data: ' . print_r($_POST, true));
+        }
+        
         // Handle form submission
         if (isset($_POST['submit'])) {
             $this->save_settings();
@@ -17,6 +22,7 @@ class GVS_Settings_Page {
         
         // Handle cleanup action
         if (isset($_POST['cleanup_action']) && $_POST['cleanup_action'] === 'cleanup') {
+            error_log('GVS: Cleanup action triggered');
             $this->cleanup_old_transactions();
         }
         
@@ -138,11 +144,21 @@ class GVS_Settings_Page {
                     <tr>
                         <th scope="row"><?php _e('Database Onderhoud', 'gordijnen-voorraad'); ?></th>
                         <td>
-                            <button type="button" class="button" onclick="if(confirm('<?php esc_attr_e('Weet u zeker dat u oude transacties wilt opschonen?', 'gordijnen-voorraad'); ?>')) { document.getElementById('cleanup_action').value='cleanup'; this.form.submit(); }">
-                                <?php _e('Oude Transacties Opschonen', 'gordijnen-voorraad'); ?>
-                            </button>
-                            <input type="hidden" id="cleanup_action" name="cleanup_action" value="">
-                            <p class="description"><?php _e('Verwijder transacties ouder dan 6 maanden', 'gordijnen-voorraad'); ?></p>
+                            <div style="margin-bottom: 10px;">
+                                <select id="cleanup_period" name="cleanup_period_value" style="margin-right: 10px;">
+                                    <option value="all"><?php _e('Alle transacties', 'gordijnen-voorraad'); ?></option>
+                                    <option value="1_week"><?php _e('Ouder dan 1 week', 'gordijnen-voorraad'); ?></option>
+                                    <option value="1_month"><?php _e('Ouder dan 1 maand', 'gordijnen-voorraad'); ?></option>
+                                    <option value="3_months"><?php _e('Ouder dan 3 maanden', 'gordijnen-voorraad'); ?></option>
+                                    <option value="6_months" selected><?php _e('Ouder dan 6 maanden', 'gordijnen-voorraad'); ?></option>
+                                    <option value="1_year"><?php _e('Ouder dan 1 jaar', 'gordijnen-voorraad'); ?></option>
+                                </select>
+                                <button type="submit" name="cleanup_action" value="cleanup" class="button" 
+                                        onclick="return confirm('Weet u zeker dat u de geselecteerde transacties wilt verwijderen?');">
+                                    <?php _e('Transacties Opschonen', 'gordijnen-voorraad'); ?>
+                                </button>
+                            </div>
+                            <p class="description"><?php _e('Verwijder transacties volgens de geselecteerde periode', 'gordijnen-voorraad'); ?></p>
                         </td>
                     </tr>
                 </table>
@@ -222,7 +238,7 @@ class GVS_Settings_Page {
         
         $messages = [
             'saved' => __('Instellingen opgeslagen', 'gordijnen-voorraad'),
-            'cleanup' => __('Oude transacties opgeschoond', 'gordijnen-voorraad'),
+            'cleanup' => __('Transacties opgeschoond', 'gordijnen-voorraad'),
         ];
         
         $message = isset($messages[$_GET['message']]) ? $messages[$_GET['message']] : '';
@@ -253,12 +269,57 @@ class GVS_Settings_Page {
         global $wpdb;
         $table = GVS_Database::get_table_name('transacties');
         
-        // Delete transactions older than 6 months
-        $date_limit = date('Y-m-d H:i:s', strtotime('-6 months'));
-        $deleted = $wpdb->query($wpdb->prepare(
-            "DELETE FROM $table WHERE created_at < %s",
-            $date_limit
-        ));
+        $period = isset($_POST['cleanup_period_value']) ? $_POST['cleanup_period_value'] : '6_months';
+        
+        // Determine date limit based on selected period
+        switch ($period) {
+            case 'all':
+                // Delete all transactions with TRUNCATE for better performance
+                $deleted = $wpdb->query("TRUNCATE TABLE $table");
+                
+                // If TRUNCATE fails (due to foreign keys), fall back to DELETE
+                if ($deleted === false) {
+                    $deleted = $wpdb->query("DELETE FROM $table");
+                }
+                
+                // Debug: log the exact query and result
+                error_log('GVS Cleanup ALL - Table: ' . $table);
+                error_log('GVS Cleanup ALL - Deleted rows: ' . $deleted);
+                error_log('GVS Cleanup ALL - Last error: ' . $wpdb->last_error);
+                
+                // Force count check
+                $remaining = $wpdb->get_var("SELECT COUNT(*) FROM $table");
+                error_log('GVS Cleanup ALL - Remaining rows: ' . $remaining);
+                break;
+            case '1_week':
+                $date_limit = date('Y-m-d H:i:s', strtotime('-1 week'));
+                break;
+            case '1_month':
+                $date_limit = date('Y-m-d H:i:s', strtotime('-1 month'));
+                break;
+            case '3_months':
+                $date_limit = date('Y-m-d H:i:s', strtotime('-3 months'));
+                break;
+            case '6_months':
+                $date_limit = date('Y-m-d H:i:s', strtotime('-6 months'));
+                break;
+            case '1_year':
+                $date_limit = date('Y-m-d H:i:s', strtotime('-1 year'));
+                break;
+            default:
+                $date_limit = date('Y-m-d H:i:s', strtotime('-6 months'));
+        }
+        
+        // Delete transactions based on date limit (unless 'all' was selected)
+        if ($period !== 'all') {
+            $deleted = $wpdb->query($wpdb->prepare(
+                "DELETE FROM $table WHERE created_at < %s",
+                $date_limit
+            ));
+        }
+        
+        // Log the cleanup action
+        error_log(sprintf('GVS Database cleanup: Deleted %d transactions (%s)', $deleted, $period));
         
         wp_redirect(add_query_arg([
             'page' => 'gvs-settings',

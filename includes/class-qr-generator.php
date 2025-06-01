@@ -73,27 +73,28 @@ class GVS_QR_Generator {
         $qr_url = self::generate_url($rol_data->qr_code, 300);
         
         $html = '
-        <div class="gvs-qr-label" style="width: 10cm; height: 12cm; padding: 20px; border: 2px solid #000; text-align: center; page-break-inside: avoid; margin: 10px auto; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-            <div style="border-bottom: 2px solid #2271b1; padding-bottom: 15px; margin-bottom: 20px;">
-                <h2 style="margin: 0; font-size: 24px; color: #2271b1; font-family: Arial, sans-serif;">' . esc_html(get_option('gvs_company_name', 'Gordijnen Voorraad')) . '</h2>
+        <div class="gvs-qr-label" style="width: 10cm; height: 10cm; padding: 15px; border: 2px solid #000; text-align: center; page-break-inside: avoid; margin: 10px auto; background: #fff;">
+            <div style="text-align: center; margin-bottom: 15px;">
+                <img src="https://kayaexclusive.com/wp-content/uploads/2025/05/logo.svg" alt="Kaya" style="height: 25px; max-width: 150px;">
             </div>
-            <img src="' . esc_url($qr_url) . '" alt="QR Code" style="width: 300px; height: 300px; margin: 20px auto; display: block;">
-            <div style="margin-top: 20px; font-family: Arial, sans-serif;">
-                <div style="font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #000;">' . esc_html($rol_data->qr_code) . '</div>
-                <div style="font-size: 18px; margin-bottom: 8px; color: #333;">
-                    <strong>Collectie:</strong> ' . esc_html($rol_data->collectie_naam) . '
+            <div style="border-top: 1px solid #000; margin-bottom: 15px;"></div>
+            <img src="' . esc_url($qr_url) . '" alt="QR Code" style="width: 200px; height: 200px; margin: 10px auto; display: block;">
+            <div style="margin-top: 15px; font-family: Arial, sans-serif;">
+                <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #000;">' . esc_html($rol_data->qr_code) . '</div>
+                <div style="font-size: 14px; text-align: left; margin: 5px 0;">
+                    <strong>Collectie:</strong> <span style="float: right;">' . esc_html($rol_data->collectie_naam) . '</span>
                 </div>
-                <div style="font-size: 18px; margin-bottom: 8px; color: #333;">
-                    <strong>Kleur:</strong> ' . esc_html($rol_data->kleur_naam) . '
+                <div style="font-size: 14px; text-align: left; margin: 5px 0;">
+                    <strong>Kleur:</strong> <span style="float: right;">' . esc_html($rol_data->kleur_naam) . '</span>
                 </div>
-                <div style="font-size: 18px; margin-bottom: 8px; color: #333;">
-                    <strong>Meters:</strong> ' . esc_html($rol_data->meters) . ' m
+                <div style="font-size: 14px; text-align: left; margin: 5px 0;">
+                    <strong>Meters:</strong> <span style="float: right;">' . esc_html($rol_data->meters) . ' m</span>
                 </div>
-                <div style="font-size: 18px; margin-bottom: 8px; color: #333;">
-                    <strong>Locatie:</strong> ' . esc_html($rol_data->locatie) . '
+                <div style="font-size: 14px; text-align: left; margin: 5px 0;">
+                    <strong>Locatie:</strong> <span style="float: right;">' . esc_html($rol_data->locatie) . '</span>
                 </div>
-                <div style="font-size: 14px; color: #666; margin-top: 15px;">
-                    ' . date('d-m-Y H:i') . '
+                <div style="font-size: 11px; color: #666; margin-top: 10px; text-align: center;">
+                    Geprint op: ' . date('d-m-Y H:i') . '
                 </div>
             </div>
         </div>';
@@ -105,7 +106,7 @@ class GVS_QR_Generator {
      * Generate bulk print page
      */
     public static function generate_bulk_print($rollen) {
-        $company_name = get_option('gvs_company_name', 'Gordijnen Voorraad');
+        $company_name = get_option('gvs_company_name', 'Kaya');
         
         $html = '
         <!DOCTYPE html>
@@ -152,63 +153,71 @@ class GVS_QR_Generator {
                     justify-content: center;
                     align-items: center;
                     text-align: center;
-                    border: 3px solid #2271b1;
-                    border-radius: 10px;
+                    border: 3px solid #000;
                     padding: 40px;
                 }
                 
-                .company-header {
-                    font-size: 36px;
-                    color: #2271b1;
-                    font-weight: bold;
-                    margin-bottom: 40px;
-                    padding-bottom: 20px;
-                    border-bottom: 3px solid #2271b1;
-                    width: 100%;
+                .company-logo {
+                    margin-bottom: 30px;
+                }
+                
+                .company-logo img {
+                    height: 50px;
+                    max-width: 250px;
+                }
+                
+                .divider {
+                    width: 80%;
+                    height: 2px;
+                    background: #000;
+                    margin: 0 auto 40px;
                 }
                 
                 .qr-code-container {
-                    margin: 40px 0;
+                    margin: 30px 0;
                 }
                 
                 .qr-code-container img {
-                    width: 400px;
-                    height: 400px;
-                    padding: 20px;
+                    width: 350px;
+                    height: 350px;
+                    padding: 15px;
                     border: 2px solid #ddd;
                     background: white;
                 }
                 
                 .qr-info {
-                    margin-top: 40px;
-                    font-size: 24px;
+                    margin-top: 30px;
+                    font-size: 20px;
                     line-height: 1.8;
+                    width: 100%;
+                    max-width: 500px;
                 }
                 
                 .qr-code-text {
-                    font-size: 32px;
+                    font-size: 28px;
                     font-weight: bold;
                     color: #000;
-                    margin: 30px 0;
+                    margin: 20px 0;
                     padding: 15px 30px;
-                    background: #f0f0f0;
-                    border-radius: 5px;
+                    background: #f5f5f5;
+                    border: 1px solid #ddd;
                 }
                 
                 .info-row {
-                    margin: 15px 0;
+                    margin: 12px 0;
                     display: flex;
-                    justify-content: center;
-                    gap: 10px;
+                    justify-content: space-between;
+                    align-items: center;
                 }
                 
                 .info-label {
                     font-weight: bold;
-                    color: #666;
+                    color: #444;
                 }
                 
                 .info-value {
-                    color: #333;
+                    color: #000;
+                    font-weight: normal;
                 }
                 
                 .date-footer {
@@ -236,7 +245,7 @@ class GVS_QR_Generator {
                         top: 20px;
                         right: 20px;
                         padding: 15px 30px;
-                        background: #2271b1;
+                        background: #000;
                         color: white;
                         border: none;
                         border-radius: 5px;
@@ -247,7 +256,7 @@ class GVS_QR_Generator {
                     }
                     
                     .print-button:hover {
-                        background: #135e96;
+                        background: #333;
                     }
                 }
                 
@@ -267,7 +276,7 @@ class GVS_QR_Generator {
             <button class="print-button" onclick="window.print()">🖨️ Print Alle QR Codes</button>';
         
         foreach ($rollen as $rol) {
-            $qr_url = self::generate_url($rol->get_qr_code(), 400);
+            $qr_url = self::generate_url($rol->get_qr_code(), 350);
             
             // Get additional info
             $kleur = GVS_Kleur::get_by_id($rol->get_kleur_id());
@@ -276,7 +285,11 @@ class GVS_QR_Generator {
             $html .= '
             <div class="page">
                 <div class="qr-label-full">
-                    <div class="company-header">' . esc_html($company_name) . '</div>
+                    <div class="company-logo">
+                        <img src="https://kayaexclusive.com/wp-content/uploads/2025/05/logo.svg" alt="Kaya">
+                    </div>
+                    
+                    <div class="divider"></div>
                     
                     <div class="qr-code-container">
                         <img src="' . esc_url($qr_url) . '" alt="QR Code">
@@ -303,9 +316,7 @@ class GVS_QR_Generator {
                         </div>
                     </div>
                     
-                    <div class="date-footer">
-                        Geprint op: ' . date('d-m-Y H:i') . '
-                    </div>
+                   
                 </div>
             </div>';
         }

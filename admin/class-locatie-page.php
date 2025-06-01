@@ -10,6 +10,14 @@ class GVS_Locatie_Page {
      * Render page
      */
     public function render_page() {
+        // Check if we need to delete
+        if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id']) && isset($_GET['_wpnonce'])) {
+            if (wp_verify_nonce($_GET['_wpnonce'], 'delete_locatie_' . $_GET['id'])) {
+                $this->delete_locatie();
+                return;
+            }
+        }
+        
         // Handle form submissions
         $this->handle_actions();
         
@@ -44,9 +52,6 @@ class GVS_Locatie_Page {
         switch ($action) {
             case 'save':
                 $this->save_locatie();
-                break;
-            case 'delete':
-                $this->delete_locatie();
                 break;
         }
     }
@@ -88,21 +93,48 @@ class GVS_Locatie_Page {
     private function delete_locatie() {
         $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
         
-        if ($id) {
-            $locatie = GVS_Locatie::get_by_id($id);
-            if ($locatie) {
-                $result = $locatie->delete();
-                
-                if (is_wp_error($result)) {
-                    wp_die($result->get_error_message());
-                } elseif ($result) {
-                    wp_redirect(add_query_arg([
-                        'page' => 'gvs-locaties',
-                        'message' => 'deleted'
-                    ], admin_url('admin.php')));
-                    exit;
-                }
-            }
+        if (!$id) {
+            wp_redirect(add_query_arg([
+                'page' => 'gvs-locaties',
+                'message' => 'error'
+            ], admin_url('admin.php')));
+            exit;
+        }
+        
+        $locatie = GVS_Locatie::get_by_id($id);
+        if (!$locatie) {
+            wp_redirect(add_query_arg([
+                'page' => 'gvs-locaties',
+                'message' => 'not_found'
+            ], admin_url('admin.php')));
+            exit;
+        }
+        
+        // Check if location has rollen
+        $rollen_count = $locatie->get_rollen_count();
+        if ($rollen_count > 0) {
+            wp_redirect(add_query_arg([
+                'page' => 'gvs-locaties',
+                'message' => 'has_rollen',
+                'count' => $rollen_count
+            ], admin_url('admin.php')));
+            exit;
+        }
+        
+        $result = $locatie->delete();
+        
+        if ($result === true) {
+            wp_redirect(add_query_arg([
+                'page' => 'gvs-locaties',
+                'message' => 'deleted'
+            ], admin_url('admin.php')));
+            exit;
+        } else {
+            wp_redirect(add_query_arg([
+                'page' => 'gvs-locaties',
+                'message' => 'delete_failed'
+            ], admin_url('admin.php')));
+            exit;
         }
     }
     
@@ -159,9 +191,19 @@ class GVS_Locatie_Page {
                                         <?php _e('Bewerk', 'gordijnen-voorraad'); ?>
                                     </a>
                                     <?php if ($locatie->aantal_rollen == 0): ?>
-                                        <a href="<?php echo wp_nonce_url(add_query_arg(['action' => 'delete', 'id' => $locatie->id]), 'gvs_locatie_action'); ?>" 
-                                           class="button button-small gvs-delete-btn"
-                                           onclick="return confirm('<?php esc_attr_e('Weet u zeker dat u deze locatie wilt verwijderen?', 'gordijnen-voorraad'); ?>')">
+                                        <?php
+                                        $delete_url = wp_nonce_url(
+                                            add_query_arg([
+                                                'page' => 'gvs-locaties',
+                                                'action' => 'delete',
+                                                'id' => $locatie->id
+                                            ], admin_url('admin.php')),
+                                            'delete_locatie_' . $locatie->id
+                                        );
+                                        ?>
+                                        <a href="<?php echo esc_url($delete_url); ?>" 
+                                           class="button button-small"
+                                           onclick="return confirm('Weet u zeker dat u locatie <?php echo esc_js($locatie->naam); ?> wilt verwijderen?');">
                                             <?php _e('Verwijder', 'gordijnen-voorraad'); ?>
                                         </a>
                                     <?php endif; ?>
@@ -180,6 +222,19 @@ class GVS_Locatie_Page {
                 </div>
             </div>
         </div>
+        
+        <script>
+        // Test if JavaScript is working
+        console.log('Locatie page JavaScript loaded');
+        
+        // Add event listener to monitor clicks
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'A' && e.target.textContent.includes('Verwijder')) {
+                console.log('Delete link clicked:', e.target.href);
+                // Don't prevent default - let the browser handle it
+            }
+        });
+        </script>
         <?php
     }
     
@@ -277,12 +332,25 @@ class GVS_Locatie_Page {
         $messages = [
             'saved' => __('Locatie opgeslagen', 'gordijnen-voorraad'),
             'deleted' => __('Locatie verwijderd', 'gordijnen-voorraad'),
+            'error' => __('Er is een fout opgetreden', 'gordijnen-voorraad'),
+            'not_found' => __('Locatie niet gevonden', 'gordijnen-voorraad'),
+            'delete_failed' => __('Locatie kon niet worden verwijderd', 'gordijnen-voorraad'),
         ];
+        
+        // Special handling for has_rollen message
+        if ($_GET['message'] === 'has_rollen') {
+            $count = isset($_GET['count']) ? intval($_GET['count']) : 0;
+            echo '<div class="notice notice-error is-dismissible"><p>';
+            echo sprintf(__('Deze locatie heeft %d rollen. Verplaats deze eerst naar een andere locatie voordat u deze locatie kunt verwijderen.', 'gordijnen-voorraad'), $count);
+            echo '</p></div>';
+            return;
+        }
         
         $message = isset($messages[$_GET['message']]) ? $messages[$_GET['message']] : '';
         
         if ($message) {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($message) . '</p></div>';
+            $type = in_array($_GET['message'], ['error', 'not_found', 'delete_failed']) ? 'error' : 'success';
+            echo '<div class="notice notice-' . $type . ' is-dismissible"><p>' . esc_html($message) . '</p></div>';
         }
     }
 }

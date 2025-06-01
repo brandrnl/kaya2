@@ -6,8 +6,8 @@ jQuery(document).ready(function($) {
         return confirm(message || gvs_ajax.strings.confirm_delete);
     };
     
-    // Handle delete buttons with confirmation
-    $(document).on('click', '.gvs-delete-btn', function(e) {
+    // Handle delete buttons - maar alleen voor specifieke classes, niet algemeen
+    $(document).on('click', '.gvs-delete-btn-disabled', function(e) {
         if (!gvsConfirmDelete()) {
             e.preventDefault();
             return false;
@@ -142,15 +142,6 @@ jQuery(document).ready(function($) {
         downloadLink.click();
         document.body.removeChild(downloadLink);
     };
-    
-    // Handle number inputs with decimal
-    $(document).on('input', 'input[type="number"][step*="."]', function() {
-        var val = $(this).val();
-        if (val && !isNaN(val)) {
-            var decimals = $(this).attr('step').split('.')[1].length || 0;
-            $(this).val(parseFloat(val).toFixed(decimals));
-        }
-    });
     
     // Toggle password visibility
     $(document).on('click', '.toggle-password', function() {

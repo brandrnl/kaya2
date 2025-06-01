@@ -53,11 +53,28 @@ class GVS_Voorraad_Page {
                 </div>
             </div>
             
+            <!-- Bulk Actions -->
+            <div class="tablenav top">
+                <div class="alignleft actions bulkactions">
+                    <label for="bulk-action-selector-top" class="screen-reader-text"><?php _e('Selecteer bulk actie', 'gordijnen-voorraad'); ?></label>
+                    <select name="action" id="bulk-action-selector-top">
+                        <option value="-1"><?php _e('Bulk acties', 'gordijnen-voorraad'); ?></option>
+                        <option value="print_qr"><?php _e('Print QR Codes', 'gordijnen-voorraad'); ?></option>
+                        <option value="uitgeven"><?php _e('Uitgeven', 'gordijnen-voorraad'); ?></option>
+                    </select>
+                    <button class="button action" id="doaction"><?php _e('Toepassen', 'gordijnen-voorraad'); ?></button>
+                    <span class="displaying-num" id="selected-count">0 items geselecteerd</span>
+                </div>
+            </div>
+            
             <!-- Results Table -->
             <div id="gvs-voorraad-table-wrapper">
                 <table class="wp-list-table widefat fixed striped">
                     <thead>
                         <tr>
+                            <td class="manage-column column-cb check-column">
+                                <input type="checkbox" id="cb-select-all">
+                            </td>
                             <th width="150"><?php _e('QR Code', 'gordijnen-voorraad'); ?></th>
                             <th><?php _e('Collectie', 'gordijnen-voorraad'); ?></th>
                             <th><?php _e('Kleur', 'gordijnen-voorraad'); ?></th>
@@ -69,7 +86,7 @@ class GVS_Voorraad_Page {
                     </thead>
                     <tbody id="gvs-voorraad-tbody">
                         <tr>
-                            <td colspan="7" class="loading"><?php _e('Voorraad laden...', 'gordijnen-voorraad'); ?></td>
+                            <td colspan="8" class="loading"><?php _e('Voorraad laden...', 'gordijnen-voorraad'); ?></td>
                         </tr>
                     </tbody>
                 </table>
@@ -131,7 +148,7 @@ class GVS_Voorraad_Page {
                         <tr>
                             <th><label for="add-meters"><?php _e('Meters per rol', 'gordijnen-voorraad'); ?></label></th>
                             <td>
-                                <input type="number" id="add-meters" name="meters" min="0.01" step="0.01" required>
+                                <input type="number" id="add-meters" name="meters" min="0.01" step="0.01" value="<?php echo get_option('gvs_default_meters', '50'); ?>" required>
                             </td>
                         </tr>
                     </table>
@@ -278,10 +295,11 @@ class GVS_Voorraad_Page {
                 var html = '';
                 
                 if (rollen.length === 0) {
-                    html = '<tr><td colspan="7"><?php _e('Geen rollen gevonden', 'gordijnen-voorraad'); ?></td></tr>';
+                    html = '<tr><td colspan="8"><?php _e('Geen rollen gevonden', 'gordijnen-voorraad'); ?></td></tr>';
                 } else {
                     rollen.forEach(function(rol) {
                         html += '<tr>';
+                        html += '<td class="check-column"><input type="checkbox" class="rol-checkbox" value="' + rol.id + '"></td>';
                         html += '<td><code>' + rol.qr_code + '</code></td>';
                         html += '<td>' + rol.collectie_naam + '</td>';
                         html += '<td>' + rol.kleur_naam + '</td>';
@@ -289,7 +307,7 @@ class GVS_Voorraad_Page {
                         html += '<td>' + rol.locatie + '</td>';
                         html += '<td>' + new Date(rol.created_at).toLocaleDateString('nl-NL') + '</td>';
                         html += '<td>';
-                        html += '<button class="button button-small gvs-view-qr" data-qr="' + rol.qr_code + '"><?php _e('QR', 'gordijnen-voorraad'); ?></button> ';
+                        html += '<button class="button button-small gvs-view-qr" data-qr="' + rol.qr_code + '" data-id="' + rol.id + '"><?php _e('QR', 'gordijnen-voorraad'); ?></button> ';
                         html += '<button class="button button-small gvs-delete-rol" data-id="' + rol.id + '" data-info="' + 
                                 rol.collectie_naam + ' - ' + rol.kleur_naam + ' - ' + rol.meters + 'm"><?php _e('Uitgeven', 'gordijnen-voorraad'); ?></button>';
                         html += '</td>';
@@ -298,6 +316,7 @@ class GVS_Voorraad_Page {
                 }
                 
                 $('#gvs-voorraad-tbody').html(html);
+                updateSelectedCount();
             }
             
             // Modal handlers
@@ -314,7 +333,7 @@ class GVS_Voorraad_Page {
             // View QR
             $(document).on('click', '.gvs-view-qr', function() {
                 var qrCode = $(this).data('qr');
-                var rolId = $(this).closest('tr').find('.gvs-delete-rol').data('id');
+                var rolId = $(this).data('id');
                 var qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(qrCode);
                 
                 $('#gvs-qr-display').html(
@@ -323,6 +342,113 @@ class GVS_Voorraad_Page {
                 ).data('rol-id', rolId);
                 $('#gvs-view-qr-modal').show();
             });
+            
+            // Select all checkbox
+            $('#cb-select-all').on('change', function() {
+                $('.rol-checkbox').prop('checked', $(this).prop('checked'));
+                updateSelectedCount();
+            });
+            
+            // Individual checkbox change
+            $(document).on('change', '.rol-checkbox', function() {
+                updateSelectedCount();
+            });
+            
+            // Update selected count
+            function updateSelectedCount() {
+                var count = $('.rol-checkbox:checked').length;
+                $('#selected-count').text(count + ' items geselecteerd');
+                
+                // Update select all checkbox
+                var total = $('.rol-checkbox').length;
+                $('#cb-select-all').prop('checked', count === total && total > 0);
+            }
+            
+            // Bulk actions
+            $('#doaction').on('click', function(e) {
+                e.preventDefault();
+                
+                var action = $('#bulk-action-selector-top').val();
+                if (action === '-1') {
+                    alert('<?php _e('Selecteer een bulk actie', 'gordijnen-voorraad'); ?>');
+                    return;
+                }
+                
+                var selectedIds = [];
+                $('.rol-checkbox:checked').each(function() {
+                    selectedIds.push($(this).val());
+                });
+                
+                if (selectedIds.length === 0) {
+                    alert('<?php _e('Selecteer minimaal één rol', 'gordijnen-voorraad'); ?>');
+                    return;
+                }
+                
+                if (action === 'print_qr') {
+                    // Print QR codes
+                    gvsPrintQRCodes(selectedIds.join(','));
+                } else if (action === 'uitgeven') {
+                    // Bulk uitgeven
+                    if (confirm('<?php _e('Weet u zeker dat u de geselecteerde rollen wilt uitgeven?', 'gordijnen-voorraad'); ?> (' + selectedIds.length + ' rollen)')) {
+                        bulkUitgeven(selectedIds);
+                    }
+                }
+            });
+            
+            // Bulk uitgeven function
+            function bulkUitgeven(rolIds) {
+                var $button = $('#doaction');
+                var originalText = $button.text();
+                
+                $button.prop('disabled', true).text('<?php _e('Bezig...', 'gordijnen-voorraad'); ?>');
+                
+                // Process each rol
+                var processed = 0;
+                var errors = 0;
+                
+                function processNext() {
+                    if (processed >= rolIds.length) {
+                        // All done
+                        var message = '<?php _e('Klaar!', 'gordijnen-voorraad'); ?> ';
+                        message += (processed - errors) + ' <?php _e('rollen uitgegeven', 'gordijnen-voorraad'); ?>';
+                        if (errors > 0) {
+                            message += ', ' + errors + ' <?php _e('fouten', 'gordijnen-voorraad'); ?>';
+                        }
+                        alert(message);
+                        
+                        $button.prop('disabled', false).text(originalText);
+                        loadVoorraad(); // Reload the table
+                        return;
+                    }
+                    
+                    var rolId = rolIds[processed];
+                    
+                    $.ajax({
+                        url: gvs_ajax.ajax_url,
+                        type: 'POST',
+                        data: {
+                            action: 'gvs_delete_rol',
+                            rol_id: rolId,
+                            nonce: gvs_ajax.nonce,
+                            notitie: 'Bulk uitgave'
+                        },
+                        success: function(response) {
+                            if (!response.success) {
+                                errors++;
+                            }
+                        },
+                        error: function() {
+                            errors++;
+                        },
+                        complete: function() {
+                            processed++;
+                            processNext();
+                        }
+                    });
+                }
+                
+                processNext();
+            }
             
             // Print single QR
             $('#gvs-print-single-qr').on('click', function() {
@@ -340,6 +466,42 @@ class GVS_Voorraad_Page {
                 $('#delete-rol-id').val(rolId);
                 $('#gvs-delete-rol-info').html('<strong>' + info + '</strong>');
                 $('#gvs-delete-rol-modal').show();
+            });
+            
+            // Delete rol form submit
+            $('#gvs-delete-rol-form').on('submit', function(e) {
+                e.preventDefault();
+                
+                var $form = $(this);
+                var $submit = $form.find('button[type="submit"]');
+                var originalText = $submit.text();
+                
+                $submit.prop('disabled', true).text('<?php _e('Bezig...', 'gordijnen-voorraad'); ?>');
+                
+                $.ajax({
+                    url: gvs_ajax.ajax_url,
+                    type: 'POST',
+                    data: {
+                        action: 'gvs_delete_rol',
+                        rol_id: $('#delete-rol-id').val(),
+                        notitie: $('#delete-notitie').val(),
+                        nonce: gvs_ajax.nonce
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            $('#gvs-delete-rol-modal').hide();
+                            loadVoorraad();
+                        } else {
+                            alert(response.data.message || gvs_ajax.strings.error);
+                        }
+                    },
+                    error: function() {
+                        alert(gvs_ajax.strings.error);
+                    },
+                    complete: function() {
+                        $submit.prop('disabled', false).text(originalText);
+                    }
+                });
             });
             
             // Add rollen form submit
@@ -382,6 +544,17 @@ class GVS_Voorraad_Page {
                                 html += '</div>';
                             });
                             
+                            html += '</div>';
+                            
+                            // Add print button
+                            html += '<p class="submit" style="text-align: center; margin-top: 20px;">';
+                            html += '<button type="button" class="button button-primary" onclick="gvsPrintQRCodes(\'' + response.data.rollen.map(r => r.id).join(',') + '\')">';
+                            html += '<?php _e('Print QR Labels', 'gordijnen-voorraad'); ?>';
+                            html += '</button> ';
+                            html += '<button type="button" class="button" onclick="location.reload()">';
+                            html += '<?php _e('Nieuwe Rollen Toevoegen', 'gordijnen-voorraad'); ?>';
+                            html += '</button>';
+                            html += '</p>';
                             
                             $('#gvs-add-result').html(html).show();
                             $form.hide();
