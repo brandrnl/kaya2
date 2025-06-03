@@ -211,6 +211,7 @@ jQuery(document).ready(function($) {
         $.ajax({
             url: gvs_mobile.ajax_url,
             type: 'POST',
+            timeout: 10000, // 10 seconden timeout
             data: {
                 action: 'gvs_scan_qr',
                 qr_code: qrCode,
@@ -229,7 +230,8 @@ jQuery(document).ready(function($) {
             },
             error: function(xhr, status, error) {
                 log('Scan error: ' + status + ' - ' + error);
-                showMessage('Verbindingsfout', 'error');
+                log('Response: ' + xhr.responseText);
+                showMessage(gvs_mobile.strings.connection_error, 'error');
                 setTimeout(() => {
                     initScanner();
                 }, 2000);
@@ -324,6 +326,7 @@ jQuery(document).ready(function($) {
         $.ajax({
             url: gvs_mobile.ajax_url,
             type: 'POST',
+            timeout: 10000,
             data: {
                 action: 'gvs_delete_rol',
                 rol_id: currentRolId,
@@ -342,7 +345,7 @@ jQuery(document).ready(function($) {
                     
                     // Feedback
                     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                    playSuccessSound(); // Gebruik success geluid voor uitgeven
+                    playSuccessSound();
                     
                     // Start nieuwe scan
                     setTimeout(() => {
@@ -370,4 +373,23 @@ jQuery(document).ready(function($) {
     log('Mobile scanner loaded');
     log('AJAX URL: ' + gvs_mobile.ajax_url);
     log('User logged in: ' + gvs_mobile.is_logged_in);
+    log('Page URL: ' + window.location.href);
+    log('Cookies: ' + document.cookie);
+    
+    // Debug: Test connection direct
+    $.ajax({
+        url: gvs_mobile.ajax_url,
+        type: 'POST',
+        data: {
+            action: 'gvs_test_connection',
+            nonce: gvs_mobile.nonce
+        },
+        success: function(response) {
+            log('Connection test SUCCESS: ' + JSON.stringify(response));
+        },
+        error: function(xhr, status, error) {
+            log('Connection test FAILED: ' + status + ' - ' + error);
+            log('Response: ' + xhr.responseText);
+        }
+    });
 });

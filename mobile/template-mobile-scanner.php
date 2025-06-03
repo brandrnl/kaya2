@@ -703,46 +703,43 @@
         }, splashMinTime);
         
         // Handle login form
-        $('#gvs-login-form').on('submit', function(e) {
-            e.preventDefault();
-            
-            const $form = $(this);
-            const $button = $('#loginButton');
-            const $error = $('#loginError');
-            
-            // Disable button and show loading
-            $button.prop('disabled', true).html('<span class="gvs-loader"></span> <?php _e('BEZIG...', 'gordijnen-voorraad'); ?>');
-            $error.removeClass('show');
-            
-            // Perform AJAX login
-            $.ajax({
-                url: '<?php echo admin_url('admin-ajax.php'); ?>',
-                type: 'POST',
-                data: {
-                    action: 'gvs_mobile_login',
-                    username: $('#username').val(),
-                    password: $('#password').val(),
-                    nonce: '<?php echo wp_create_nonce('gvs_mobile_login'); ?>'
-                },
-                success: function(response) {
-                    if (response.success) {
-                        // Login successful
-                        $('#userInfo').text(response.data.display_name);
-                        $('#loginScreen').fadeOut(300, function() {
-                            $('#mainApp').addClass('active');
-                        });
-                    } else {
-                        // Show error
-                        $error.text(response.data.message || '<?php _e('Ongeldige gebruikersnaam of wachtwoord', 'gordijnen-voorraad'); ?>').addClass('show');
-                        $button.prop('disabled', false).text('<?php _e('INLOGGEN', 'gordijnen-voorraad'); ?>');
-                    }
-                },
-                error: function() {
-                    $error.text('<?php _e('Verbindingsfout. Probeer het opnieuw.', 'gordijnen-voorraad'); ?>').addClass('show');
-                    $button.prop('disabled', false).text('<?php _e('INLOGGEN', 'gordijnen-voorraad'); ?>');
-                }
-            });
-        });
+    $('#gvs-login-form').on('submit', function(e) {
+    e.preventDefault();
+    
+    const $form = $(this);
+    const $button = $('#loginButton');
+    const $error = $('#loginError');
+    
+    $button.prop('disabled', true).html('<span class="gvs-loader"></span> <?php _e('BEZIG...', 'gordijnen-voorraad'); ?>');
+    $error.removeClass('show');
+    
+    $.ajax({
+        url: '<?php echo admin_url('admin-ajax.php'); ?>',
+        type: 'POST',
+        data: {
+            action: 'gvs_mobile_login',
+            username: $('#username').val(),
+            password: $('#password').val(),
+            nonce: '<?php echo wp_create_nonce('gvs_mobile_login'); ?>'
+        },
+        success: function(response) {
+            if (response.success) {
+                // Login successful - RELOAD de pagina om cookies correct te zetten
+                $button.html('<span class="gvs-loader"></span> <?php _e('Doorverwijzen...', 'gordijnen-voorraad'); ?>');
+                
+                // Forceer een harde page reload
+                window.location.href = window.location.pathname + '?logged_in=1';
+            } else {
+                $error.text(response.data.message || '<?php _e('Ongeldige gebruikersnaam of wachtwoord', 'gordijnen-voorraad'); ?>').addClass('show');
+                $button.prop('disabled', false).text('<?php _e('INLOGGEN', 'gordijnen-voorraad'); ?>');
+            }
+        },
+        error: function() {
+            $error.text('<?php _e('Verbindingsfout. Probeer het opnieuw.', 'gordijnen-voorraad'); ?>').addClass('show');
+            $button.prop('disabled', false).text('<?php _e('INLOGGEN', 'gordijnen-voorraad'); ?>');
+        }
+    });
+});
     });
     </script>
 </body>

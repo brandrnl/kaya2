@@ -10,11 +10,10 @@ class GVS_Mobile_Scanner {
      * Constructor
      */
     public function __construct() {
+        // Verhoog prioriteit voor session setup
+        add_action('init', [$this, 'setup_nonce_for_visitors'], 1);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_mobile_scripts']);
         add_action('wp_head', [$this, 'add_pwa_meta']);
-        
-        // Belangrijk: genereer nonce voor ALLE gebruikers
-        add_action('init', [$this, 'setup_nonce_for_visitors']);
     }
     
     /**
@@ -52,13 +51,14 @@ class GVS_Mobile_Scanner {
             true
         );
         
-        // BELANGRIJK: Zorg dat AJAX URL en nonce correct worden doorgegeven
-        // En voeg is_user_logged_in toe voor de scanner
+        // Localize script met retry mechanisme
         wp_localize_script('gvs-mobile-scanner', 'gvs_mobile', [
             'ajax_url' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('gvs_ajax_nonce'),
             'is_logged_in' => is_user_logged_in() ? 'true' : 'false',
             'user_id' => get_current_user_id(),
+            'retry_delay' => 1000, // Retry delay in ms
+            'max_retries' => 3,    // Maximum aantal retries
             'strings' => [
                 'scanning' => __('Scannen...', 'gordijnen-voorraad'),
                 'scan_success' => __('Scan succesvol!', 'gordijnen-voorraad'),
@@ -68,8 +68,9 @@ class GVS_Mobile_Scanner {
                 'deleted' => __('Rol uitgegeven', 'gordijnen-voorraad'),
                 'error' => __('Er is een fout opgetreden', 'gordijnen-voorraad'),
                 'processing' => __('Bezig...', 'gordijnen-voorraad'),
-                'connection_error' => __('Verbindingsfout. Controleer uw internetverbinding.', 'gordijnen-voorraad'),
-                'not_logged_in' => __('U moet ingelogd zijn om te scannen', 'gordijnen-voorraad')
+                'connection_error' => __('Verbindingsfout. Probeer het opnieuw.', 'gordijnen-voorraad'),
+                'not_logged_in' => __('U moet ingelogd zijn om te scannen', 'gordijnen-voorraad'),
+                'retrying' => __('Opnieuw proberen...', 'gordijnen-voorraad')
             ]
         ]);
     }
@@ -89,12 +90,17 @@ class GVS_Mobile_Scanner {
         <meta name="theme-color" content="#000000">
         <link rel="manifest" href="<?php echo GVS_PLUGIN_URL; ?>mobile/manifest.json">
         
+        <!-- Preconnect voor snellere verbindingen -->
+        <link rel="preconnect" href="<?php echo site_url(); ?>">
+        <link rel="dns-prefetch" href="<?php echo site_url(); ?>">
+        
         <!-- Debug info -->
         <script>
         console.log('GVS Mobile Scanner loaded');
         console.log('AJAX URL:', '<?php echo admin_url('admin-ajax.php'); ?>');
         console.log('User logged in:', <?php echo is_user_logged_in() ? 'true' : 'false'; ?>);
         console.log('User ID:', <?php echo get_current_user_id(); ?>);
+        console.log('Site URL:', '<?php echo site_url(); ?>');
         </script>
         <?php
     }

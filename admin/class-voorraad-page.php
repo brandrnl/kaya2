@@ -402,16 +402,26 @@ class GVS_Voorraad_Page {
                 updateSelectedCount();
             }
             
-            // Modal handlers
-            $('#gvs-add-rollen-btn').on('click', function() {
-                $('#gvs-add-rollen-modal').show();
-                $('#gvs-add-result').hide();
-                $('#gvs-add-rollen-form')[0].reset();
-            });
-            
-            $('.gvs-modal-close, .gvs-modal-cancel').on('click', function() {
-                $('.gvs-modal').hide();
-            });
+// Modal handlers
+$('#gvs-add-rollen-btn').on('click', function() {
+    resetAddRollenForm();
+    $('#gvs-add-rollen-modal').show();
+});
+
+// Reset form function
+function resetAddRollenForm() {
+    $('#gvs-add-rollen-form')[0].reset();
+    $('#gvs-add-result').hide().empty();
+    $('#gvs-add-rollen-form').show();
+    $('#add-kleur').html('<option value=""><?php _e('Selecteer eerst collectie', 'gordijnen-voorraad'); ?></option>').prop('disabled', true);
+    // Reset submit button
+    $('#gvs-add-rollen-form button[type="submit"]').prop('disabled', false).text('<?php _e('Genereer QR Codes', 'gordijnen-voorraad'); ?>');
+}
+
+// Global function for reset button
+window.gvsResetAndShowForm = function() {
+    resetAddRollenForm();
+};
             
             // View QR
             $(document).on('click', '.gvs-view-qr', function() {
@@ -634,9 +644,9 @@ class GVS_Voorraad_Page {
                             html += '<button type="button" class="button button-primary" onclick="gvsPrintQRCodes(\'' + response.data.rollen.map(r => r.id).join(',') + '\')">';
                             html += '<?php _e('Print QR Labels', 'gordijnen-voorraad'); ?>';
                             html += '</button> ';
-                            html += '<button type="button" class="button" onclick="location.reload()">';
-                            html += '<?php _e('Nieuwe Rollen Toevoegen', 'gordijnen-voorraad'); ?>';
-                            html += '</button>';
+                            html += '<button type="button" class="button" onclick="gvsResetAndShowForm()">';
+html += '<?php _e('Nieuwe Rollen Toevoegen', 'gordijnen-voorraad'); ?>';
+html += '</button>';
                             html += '</p>';
                             
                             $('#gvs-add-result').html(html).show();

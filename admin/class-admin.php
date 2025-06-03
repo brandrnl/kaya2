@@ -26,6 +26,7 @@ class GVS_Admin {
         require_once GVS_PLUGIN_DIR . 'admin/class-locatie-page.php';
         require_once GVS_PLUGIN_DIR . 'admin/class-voorraad-page.php';
         require_once GVS_PLUGIN_DIR . 'admin/class-settings-page.php';
+        require_once GVS_PLUGIN_DIR . 'admin/class-import-page.php';
     }
     
     /**
@@ -91,6 +92,16 @@ class GVS_Admin {
             'gvs-mobile-scanner',
             [$this, 'render_mobile_link']
         );
+		
+		// Import
+add_submenu_page(
+    'gvs-dashboard',
+    __('Import Excel', 'gordijnen-voorraad'),
+    __('Import Excel', 'gordijnen-voorraad'),
+    'manage_options',
+    'gvs-import',
+    [new GVS_Import_Page(), 'render_page']
+);
         
         // Settings
         add_submenu_page(
